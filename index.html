@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5th SFG ZANCUDO DIVISION</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login-screen">
+    <div class="login-box">
+        <h2 style="color: var(--green-bright); border:none; padding:0; margin-bottom:20px;">5th SFG ZANCUDO DIVISION</h2>
+        <input type="text" id="user" placeholder="USER" onkeypress="handleLoginKey(event)">
+        <input type="password" id="pass" placeholder="PASSWORD" onkeypress="handleLoginKey(event)">
+        <br>
+        <button onclick="accessGranted()">CONNECTION</button>
+    </div>
+</div>
+
+<div id="dashboard">
+    <header>
+        <nav id="main-nav">
+            <div class="nav-item active" onclick="showTab('home')">Accueil</div>
+            <div class="nav-item" onclick="showTab('connexions')">Connexions</div> 
+            <div class="nav-item" onclick="showTab('op-running')">Opérations en cours</div>
+            <div class="nav-item" onclick="showTab('depart')">Départ Opération</div>
+            <div class="nav-item" onclick="showTab('absence')">Absences</div>
+            <div class="nav-item" onclick="showTab('otages-hexa')">Otages Hexa</div>
+            <div class="nav-item" onclick="showTab('otages-res')">Otages Résistants</div>
+            <div class="nav-item" onclick="showTab('rapport')">Rapport</div>
+            <div class="nav-item" onclick="showTab('comms')">Communications</div>
+        </nav>
+        <div class="header-right">
+            <div id="op-widget" onclick="showTab('op-running')">
+                OPÉRATIONS ACTIVES : <span id="widget-count" style="color:var(--green-bright)">0</span>
+            </div>
+            <button class="btn-logout" onclick="logout()">LOGOUT</button>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div id="home" class="content-section active">
+            <h2>> TERMINAL D'ACCUEIL</h2>
+            <div style="background: rgba(0,0,0,0.7); padding: 20px; border: 1px solid var(--green-army);">
+                <p>Bienvenue, Opérateur <span id="display-user" style="color:var(--green-bright)"></span>.</p>
+                <p id="system-clock" style="color:var(--green-bright); font-size: 1.1rem;"></p>
+                <p style="font-size: 0.8rem; color: #666;">Système opérationnel. Surveillance satellite active.</p>
+            </div>
+        </div>
+
+        <div id="connexions" class="content-section">
+            <h2>> ÉTAT DES CONNEXIONS RÉSEAU</h2>
+            <div style="background: rgba(0,0,0,0.8); padding: 20px; border: 1px solid var(--green-army);">
+                <table class="conn-table">
+                    <thead>
+                        <tr>
+                            <th>OPÉRATEUR</th>
+                            <th>STATUT</th>
+                            <th>DERNIÈRE ACTIVITÉ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="conn-list">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="op-running" class="content-section">
+            <h2>> MISSIONS ACTIVES</h2>
+            <div id="active-ops-list"><p style="font-style: italic; color: #444;">Aucune opération en cours.</p></div>
+        </div>
+
+        <div id="depart" class="content-section">
+            <h2>> NOUVEAU DÉPLOIEMENT</h2>
+            <div style="max-width: 600px; background: rgba(0,0,0,0.8); padding: 20px; border: 1px solid var(--green-army);">
+                <label>LEAD OPERATION :</label>
+                <select id="lead-op"></select>
+                <div style="margin-top: 20px;">
+                    <div class="vehicule-row" style="font-weight: bold; color: var(--green-bright);"><div>VÉHICULE</div><div>PAX</div></div>
+                    <div class="vehicule-row"><input type="text" class="v-name" placeholder="V1"> <input type="text" class="v-pax" placeholder="Pax..."></div>
+                    <div class="vehicule-row"><input type="text" class="v-name" placeholder="V2"> <input type="text" class="v-pax" placeholder="..."></div>
+                    <div class="vehicule-row"><input type="text" class="v-name" placeholder="V3"> <input type="text" class="v-pax" placeholder="..."></div>
+                    <div class="vehicule-row"><input type="text" class="v-name" placeholder="V4"> <input type="text" class="v-pax" placeholder="..."></div>
+                    <div class="vehicule-row"><input type="text" class="v-name" placeholder="V5"> <input type="text" class="v-pax" placeholder="..."></div>
+                    <div class="vehicule-row"><input type="text" class="v-name" placeholder="V6"> <input type="text" class="v-pax" placeholder="..."></div>
+                </div>
+                <button onclick="launchOp()" style="width: 100%;">INITIALISER MISSION</button>
+            </div>
+        </div>
+
+        <div id="comms" class="content-section">
+            <h2>> RÉSEAU DE COMMUNICATION SECURISE</h2>
+            <div class="sub-nav">
+                <div id="sub-comms-saisie" class="sub-item active" onclick="toggleCommsSub('saisie')">ENVOYER MESSAGE</div>
+                <div id="sub-comms-archive" class="sub-item" onclick="toggleCommsSub('archive')">BOITE DE RECEPTION</div>
+            </div>
+            <div id="comms-form">
+                <label>DESTINATAIRE :</label>
+                <select id="comms-dest"></select> <label>MESSAGE :</label>
+                <textarea id="comms-msg" rows="6" placeholder="Transmission cryptée..."></textarea>
+                <button onclick="sendComm()">TRANSMETTRE PAR SATELLITE</button>
+            </div>
+            <div id="comms-archive-list" style="display:none;"></div>
+        </div>
+
+        <div id="otages-hexa" class="content-section">
+            <h2>> DIVISION HEXAGONALE</h2>
+            <div class="sub-nav">
+                <div id="sub-hexa-saisie" class="sub-item active" onclick="toggleSub('hexa', 'saisie')">SAISIE</div>
+                <div id="sub-hexa-archive" class="sub-item" onclick="toggleSub('hexa', 'archive')">ARCHIVES</div>
+            </div>
+            <div id="hexa-form">
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="h-nom" placeholder="Nom">
+                    <input type="text" id="h-prenom" placeholder="Prénom">
+                </div>
+                <input type="text" id="h-grade" placeholder="Grade">
+                <input type="text" id="h-reg" placeholder="Régiment">
+                <label>AVEUX / INFOS :</label>
+                <textarea id="h-donne" placeholder="Détail des informations collectées..." rows="4"></textarea>
+                <button onclick="saveOtage('hexa')">ARCHIVER DANS LE SYSTÈME</button>
+            </div>
+            <div id="hexa-archive-list" style="display:none;"></div>
+        </div>
+
+        <div id="otages-res" class="content-section">
+            <h2>> RÉSISTANTS</h2>
+            <div class="sub-nav">
+                <div id="sub-res-saisie" class="sub-item active" onclick="toggleSub('res', 'saisie')">SAISIE</div>
+                <div id="sub-res-archive" class="sub-item" onclick="toggleSub('res', 'archive')">ARCHIVES</div>
+            </div>
+            <div id="res-form">
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="r-nom" placeholder="Nom">
+                    <input type="text" id="r-prenom" placeholder="Prénom">
+                </div>
+                <input type="text" id="r-grade" placeholder="Grade">
+                <input type="text" id="r-reg" placeholder="Groupe / Régiment">
+                <label>AVEUX / INFOS :</label>
+                <textarea id="r-donne" placeholder="Détail des informations collectées..." rows="4"></textarea>
+                <button onclick="saveOtage('res')">ARCHIVER DANS LE SYSTÈME</button>
+            </div>
+            <div id="res-archive-list" style="display:none;"></div>
+        </div>
+
+        <div id="absence" class="content-section">
+            <h2>> GESTION DES ABSENCES</h2>
+            <div class="sub-nav">
+                <div id="sub-abs-saisie" class="sub-item active" onclick="toggleAbsSub('saisie')">DÉCLARATION</div>
+                <div id="sub-abs-archive" class="sub-item" onclick="toggleAbsSub('archive')">ARCHIVES</div>
+            </div>
+            <div id="abs-form">
+                <label>Callsign :</label><input type="text" id="abs-call">
+                <label>Grade :</label><input type="text" id="abs-grade">
+                <div style="display: flex; gap: 10px;">
+                    <div><label>Début :</label><input type="date" id="abs-start"></div>
+                    <div><label>Fin :</label><input type="date" id="abs-end"></div>
+                </div>
+                <label>Raison :</label><textarea id="abs-raison" rows="3"></textarea>
+                <button onclick="saveAbsence()">VALIDER</button>
+            </div>
+            <div id="abs-archive-list" style="display:none;"></div>
+        </div>
+
+        <div id="rapport" class="content-section">
+            <h2>> RAPPORTS D'OPÉRATION</h2>
+            <div class="sub-nav">
+                <div id="sub-rap-saisie" class="sub-item active" onclick="toggleRapSub('saisie')">RÉDACTION</div>
+                <div id="sub-rap-archive" class="sub-item" onclick="toggleRapSub('archive')">ARCHIVES</div>
+            </div>
+            <div id="rap-form">
+                <input type="text" id="rap-title" placeholder="Titre">
+                <textarea id="rap-text" rows="10" placeholder="Rapport de mission détaillé..."></textarea>
+                <button onclick="saveRapport()">TRANSMETTRE</button>
+            </div>
+            <div id="rap-archive-list" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
