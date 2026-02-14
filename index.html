@@ -6,7 +6,26 @@
     <title>5th SFG ZANCUDO DIVISION</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Animation pour le DEFCON 1 */
+        /* Overlay pour le changement de couleur global */
+        #defcon-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Permet de cliquer à travers */
+            z-index: 1; /* Entre le fond et le contenu */
+            transition: background 1.5s ease;
+            background: rgba(0, 0, 0, 0);
+        }
+
+        /* Conteneur principal au-dessus de l'overlay */
+        #login-screen, #dashboard {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Animation pour le clignotement DEFCON 1 & 2 */
         @keyframes blink-red {
             0% { opacity: 1; border-color: #ff0000; box-shadow: inset 0 0 15px #ff0000; }
             50% { opacity: 0.7; border-color: #550000; box-shadow: inset 0 0 5px #550000; }
@@ -14,10 +33,13 @@
         }
         .blink-active {
             animation: blink-red 1s infinite !important;
+            background: rgba(237, 7, 7, 0.2) !important;
         }
     </style>
 </head>
 <body>
+
+<div id="defcon-overlay"></div>
 
 <div id="login-screen">
     <div class="login-box">
@@ -45,10 +67,12 @@
         <div class="header-right" style="display: flex; align-items: center;">
             <div id="alert-status-container" style="margin-right: 15px; border: 1px solid #444; padding: 2px 8px; background: rgba(0,0,0,0.8); display: flex; align-items: center; gap: 5px;">
                 <label style="font-size: 0.65rem; color: #888; font-family: monospace;">ALERT_LEVEL:</label>
-                <select id="defcon-selector" onchange="window.changeDefcon(this.value)" style="background:none; color:#00ff00; border:none; font-family:monospace; cursor:pointer; font-weight:bold; font-size:0.8rem; outline:none;">
-                    <option value="5" style="background:#000; color:#00ff00;">DEFCON 5</option>
-                    <option value="3" style="background:#000; color:#ff8800;">DEFCON 3</option>
-                    <option value="1" style="background:#000; color:#ff0000;">DEFCON 1</option>
+                <select id="defcon-selector" onchange="window.changeDefcon(this.value)" style="background:none; color:#8db600; border:none; font-family:monospace; cursor:pointer; font-weight:bold; font-size:0.8rem; outline:none;">
+                    <option value="5" style="background:#000; color:#8db600;">DEFCON 5</option>
+                    <option value="4" style="background:#000; color:#8db600;">DEFCON 4</option>
+                    <option value="3" style="background:#000; color:#c1630b;">DEFCON 3</option>
+                    <option value="2" style="background:#000; color:#be2727;">DEFCON 2</option>
+                    <option value="1" style="background:#000; color:#ed0707;">DEFCON 1</option>
                 </select>
             </div>
 
@@ -68,7 +92,6 @@
                 <p style="font-size: 0.8rem; color: #666;">Système opérationnel. Surveillance satellite active.</p>
             </div>
         </div>
-
         <div id="connexions" class="content-section">
             <h2>> ÉTAT DES CONNEXIONS RÉSEAU</h2>
             <table class="conn-table">
