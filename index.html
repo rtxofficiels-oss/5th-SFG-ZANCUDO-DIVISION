@@ -198,6 +198,11 @@
   // Initialisation
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+        // Permet au fichier script.js d'envoyer des données globales
+window.updateGlobalData = function(data) {
+  const globalRef = ref(db, 'global/');
+  set(globalRef, data);
+};
 
   // Fonction pour mettre à jour le statut
   window.updateStatus = function(userName, status) {
@@ -233,3 +238,4 @@
 </body>
 
 </html>
+
