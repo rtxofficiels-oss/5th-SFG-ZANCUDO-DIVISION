@@ -164,19 +164,35 @@ window.saveAbsence = function() {
     window.toggleSub('abs', 'archive');
 };
 
-// --- MISSIONS ---
+// --- MISSIONS (Version 8 Véhicules) ---
 window.launchOp = function() {
-    const lead = document.getElementById('lead-op');
-    const v1 = document.getElementById('v1-name');
-    const p1 = document.getElementById('v1-pax');
+    let missionVehicules = [];
+    
+    // On boucle de 1 à 8 pour récupérer les données
+    for (let i = 1; i <= 8; i++) {
+        let name = document.getElementById(`v${i}-name`).value;
+        let pax = document.getElementById(`v${i}-pax`).value;
+        if (name !== "") {
+            missionVehicules.push({ name: name, pax: pax });
+        }
+    }
+
+    if (missionVehicules.length === 0) return alert("ERREUR: AUCUN VÉHICULE SAISI");
+
     activeOps.push({ 
-        lead: lead ? lead.value : "Inconnu", 
-        v1: v1 ? v1.value : "N/A", 
-        p1: p1 ? p1.value : "0", 
+        lead: document.getElementById('lead-op').value, 
+        vehicules: missionVehicules, 
         date: new Date().toLocaleTimeString() 
     });
+
     persist();
     window.showTab('op-running');
+    
+    // Nettoyage des champs après lancement
+    for (let i = 1; i <= 8; i++) {
+        document.getElementById(`v${i}-name`).value = "";
+        document.getElementById(`v${i}-pax`).value = "";
+    }
 };
 
 function updateOpsUI() {
@@ -185,11 +201,12 @@ function updateOpsUI() {
     if(count) count.textContent = activeOps.length;
     if(list) {
         list.innerHTML = activeOps.map((op, i) => `
-            <div class="op-card" style="border:1px solid #4b5320; padding:10px; margin-bottom:10px;">
-                <strong>LEAD: ${op.lead.toUpperCase()}</strong> (${op.date})<br>
-                VEHICULE: ${op.v1} | PAX: ${op.p1}<br>
-                <button onclick="window.closeOp(${i})" style="background:#8b0000; color:white; border:none; padding:5px; margin-top:5px; cursor:pointer;">TERMINER</button>
-            </div>`).join('') || "RAS";
+            <div class="op-card" style="border:1px solid #4b5320; padding:15px; margin-bottom:15px; background:rgba(0,0,0,0.8);">
+                <strong style="color:var(--green-bright); font-size:1.1rem;">LEAD: ${op.lead.toUpperCase()}</strong> 
+                <span style="font-size:0.8rem; color:#666;">- ${op.date}</span><br><br>
+                ${op.vehicules.map(v => `<div style="font-size:0.9rem;">🛰️ ${v.name} | PAX: ${v.pax}</div>`).join('')}
+                <button onclick="window.closeOp(${i})" style="background:#8b0000; color:white; border:none; padding:8px; margin-top:10px; width:100%; cursor:pointer;">TERMINER LA MISSION</button>
+            </div>`).join('') || "RAS - AUCUNE OPÉRATION";
     }
 }
 
@@ -205,3 +222,4 @@ function updateConnUI() {
 }
 
 window.logout = () => { if(window.updateStatus) window.updateStatus(currentUser, 'offline'); location.reload(); };
+
