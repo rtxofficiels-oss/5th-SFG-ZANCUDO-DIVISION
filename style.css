@@ -4,13 +4,13 @@
     --bg-dark: rgba(10, 10, 10, 0.9);
     --input-bg: #151515;
     --alert-red: #8b0000;
+    --alert-orange: #ff8800; /* Ajout pour DEFCON 3 */
     --edit-blue: #004d8b;
-    --text-main: #c4c4c4; /* Un gris clair pour la lecture */
+    --text-main: #c4c4c4;
 }
 
 body {
     background-color: #000;
-    /* Image de fond avec filtre pour ne pas gêner la lecture */
     background-image: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1579546673183-596876b63028?q=80&w=2070&auto=format&fit=crop');
     background-size: cover;
     background-position: center;
@@ -18,9 +18,39 @@ body {
     color: var(--text-main);
     font-family: 'Courier New', Courier, monospace;
     margin: 0;
-    overflow-x: hidden; /* Empêche le scroll horizontal seulement */
+    overflow-x: hidden;
     height: 100vh;
 }
+
+/* --- DEFCON SELECTOR STYLE --- */
+#defcon-selector {
+    padding: 2px 5px;
+    margin: 0;
+    width: auto;
+    border: none;
+    background: transparent;
+    font-weight: bold;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+#defcon-selector option {
+    background: #000;
+}
+
+/* Animation d'alerte pour le widget en DEFCON 1 */
+.blink-red-active {
+    animation: blink-red 0.8s infinite !important;
+}
+
+@keyframes blink-red {
+    0% { background: var(--alert-red); color: white; }
+    50% { background: transparent; color: var(--alert-red); }
+    100% { background: var(--alert-red); color: white; }
+}
+
+/* --- FIN DEFCON STYLE --- */
 
 #login-screen { 
     display: flex; 
@@ -36,7 +66,7 @@ body {
     padding: 40px; 
     background: rgba(0,0,0,0.95); 
     text-align: center; 
-    box-shadow: 0 0 30px rgba(141, 182, 0, 0.2); /* Petit halo vert */
+    box-shadow: 0 0 30px rgba(141, 182, 0, 0.2);
 }
 
 input, textarea, select { 
@@ -51,7 +81,6 @@ input, textarea, select {
     font-family: 'Courier New', Courier, monospace; 
 }
 
-/* Amélioration du bouton pour qu'il réagisse bien sur Chrome */
 button { 
     background: var(--green-army); 
     color: #fff; 
@@ -71,9 +100,10 @@ button:hover {
 }
 
 #dashboard { 
-    display: none; /* Changé en 'flex' par le JS lors de la connexion */
+    display: none; 
     height: 100vh; 
-    flex-direction: column; 
+    flex-direction: column;
+    transition: border-color 0.5s ease, box-shadow 0.5s ease; /* Transition douce pour le DEFCON */
 }
 
 header { 
@@ -106,11 +136,11 @@ nav { display: flex; gap: 8px; flex-wrap: wrap; }
 .main-content { 
     padding: 30px; 
     flex-grow: 1; 
-    overflow-y: auto; /* Permet de scroller si le contenu est long */
+    overflow-y: auto; 
     background: var(--bg-dark); 
+    position: relative;
 }
 
-/* Effet de scanline typique des vieux terminaux (optionnel mais stylé) */
 .main-content::before {
     content: " ";
     display: block;
@@ -130,7 +160,6 @@ nav { display: flex; gap: 8px; flex-wrap: wrap; }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Tableaux des connexions */
 .conn-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
 .conn-table th { 
     text-align: left; 
@@ -148,9 +177,7 @@ nav { display: flex; gap: 8px; flex-wrap: wrap; }
     100% { opacity: 1; border-color: #ff0000; }
 }
 
-/* Scrollbar stylisée pour Chrome/Opera */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #000; }
 ::-webkit-scrollbar-thumb { background: var(--green-army); }
 ::-webkit-scrollbar-thumb:hover { background: var(--green-bright); }
-
