@@ -180,5 +180,56 @@
 </div>
 
 <script src="script.js"></script>
+    <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, set, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  // Ta configuration que j'ai récupérée sur ton image
+  const firebaseConfig = {
+    apiKey: "AIzaSyD837-8hJ_B4XPJuXTE8i29bAMTSy2VQo",
+    authDomain: "sfg-zancudo-division.firebaseapp.com",
+    databaseURL: "https://sfg-zancudo-division-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "sfg-zancudo-division",
+    storageBucket: "sfg-zancudo-division.firebasestorage.app",
+    messagingSenderId: "975179018138",
+    appId: "1:975179018138:web:45410cd990b2ee39a81423"
+  };
+
+  // Initialisation
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Fonction pour mettre à jour le statut
+  window.updateStatus = function(userName, status) {
+    const userRef = ref(db, 'users/' + userName);
+    
+    if (status === 'online') {
+      set(userRef, {
+        status: 'online',
+        last_changed: serverTimestamp()
+      });
+      // Si le mec ferme l'onglet, il passe en offline automatiquement
+      onDisconnect(userRef).set({
+        status: 'offline',
+        last_changed: serverTimestamp()
+      });
+    } else {
+      set(userRef, {
+        status: 'offline',
+        last_changed: serverTimestamp()
+      });
+    }
+  };
+
+  // Écouter les changements pour mettre à jour ton tableau en temps réel
+  const usersRef = ref(db, 'users/');
+  onValue(usersRef, (snapshot) => {
+    const data = snapshot.val();
+    // Ici, on appellera une fonction pour rafraîchir ton affichage
+    console.log("Mise à jour des membres :", data);
+    if(window.refreshUIdisplay) window.refreshUIdisplay(data);
+  });
+</script>
 </body>
+
 </html>
