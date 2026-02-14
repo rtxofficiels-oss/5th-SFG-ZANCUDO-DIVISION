@@ -3,8 +3,9 @@
     --green-bright: #8db600;
     --bg-dark: rgba(10, 10, 10, 0.9);
     --input-bg: #151515;
-    --alert-red: #8b0000;
-    --alert-orange: #ff8800; /* Ajout pour DEFCON 3 */
+    --alert-red-bright: rgb(237, 7, 7);  /* DEFCON 1 */
+    --alert-red-dim: rgb(190, 39, 39);     /* DEFCON 2 */
+    --alert-orange: rgb(193, 99, 11);    /* DEFCON 3 */
     --edit-blue: #004d8b;
     --text-main: #c4c4c4;
 }
@@ -20,6 +21,25 @@ body {
     margin: 0;
     overflow-x: hidden;
     height: 100vh;
+}
+
+/* --- AJOUT OVERLAY DEFCON GLOBAL --- */
+#defcon-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1; /* Derrière le contenu, devant le background */
+    transition: background 1.5s ease;
+    background: rgba(0, 0, 0, 0);
+}
+
+/* On s'assure que le dashboard reste au dessus du voile de couleur */
+#dashboard, #login-screen {
+    position: relative;
+    z-index: 10;
 }
 
 /* --- DEFCON SELECTOR STYLE --- */
@@ -39,15 +59,15 @@ body {
     background: #000;
 }
 
-/* Animation d'alerte pour le widget en DEFCON 1 */
+/* Animation d'alerte pour le widget en DEFCON 1 et 2 */
 .blink-red-active {
-    animation: blink-red 0.8s infinite !important;
+    animation: blink-red-alert 0.8s infinite !important;
 }
 
-@keyframes blink-red {
-    0% { background: var(--alert-red); color: white; }
-    50% { background: transparent; color: var(--alert-red); }
-    100% { background: var(--alert-red); color: white; }
+@keyframes blink-red-alert {
+    0% { background: var(--alert-red-bright); color: white; }
+    50% { background: transparent; color: var(--alert-red-bright); }
+    100% { background: var(--alert-red-bright); color: white; }
 }
 
 /* --- FIN DEFCON STYLE --- */
@@ -103,7 +123,7 @@ button:hover {
     display: none; 
     height: 100vh; 
     flex-direction: column;
-    transition: border-color 0.5s ease, box-shadow 0.5s ease; /* Transition douce pour le DEFCON */
+    transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
 
 header { 
