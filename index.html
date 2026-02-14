@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>5th SFG ZANCUDO DIVISION</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Animation pour le DEFCON 1 */
+        @keyframes blink-red {
+            0% { opacity: 1; border-color: #ff0000; box-shadow: inset 0 0 15px #ff0000; }
+            50% { opacity: 0.7; border-color: #550000; box-shadow: inset 0 0 5px #550000; }
+            100% { opacity: 1; border-color: #ff0000; box-shadow: inset 0 0 15px #ff0000; }
+        }
+        .blink-active {
+            animation: blink-red 1s infinite !important;
+        }
+    </style>
 </head>
 <body>
 
@@ -18,7 +29,7 @@
     </div>
 </div>
 
-<div id="dashboard" style="display:none;"> 
+<div id="dashboard" style="display:none; border-top: 4px solid #00ff00; transition: all 0.5s ease;"> 
     <header>
         <nav id="main-nav">
             <div class="nav-item active" onclick="window.showTab('home')">Accueil</div>
@@ -31,11 +42,20 @@
             <div class="nav-item" onclick="window.showTab('rapport')">Rapport</div>
             <div class="nav-item" onclick="window.showTab('comms')">Communications</div>
         </nav>
-        <div class="header-right">
-            <div id="op-widget" onclick="window.showTab('op-running')">
+        <div class="header-right" style="display: flex; align-items: center;">
+            <div id="alert-status-container" style="margin-right: 15px; border: 1px solid #444; padding: 2px 8px; background: rgba(0,0,0,0.8); display: flex; align-items: center; gap: 5px;">
+                <label style="font-size: 0.65rem; color: #888; font-family: monospace;">ALERT_LEVEL:</label>
+                <select id="defcon-selector" onchange="window.changeDefcon(this.value)" style="background:none; color:#00ff00; border:none; font-family:monospace; cursor:pointer; font-weight:bold; font-size:0.8rem; outline:none;">
+                    <option value="5" style="background:#000; color:#00ff00;">DEFCON 5</option>
+                    <option value="3" style="background:#000; color:#ff8800;">DEFCON 3</option>
+                    <option value="1" style="background:#000; color:#ff0000;">DEFCON 1</option>
+                </select>
+            </div>
+
+            <div id="op-widget" onclick="window.showTab('op-running')" style="cursor:pointer; border:1px solid var(--green-army); padding:2px 8px;">
                 OPÉRATIONS ACTIVES : <span id="widget-count" style="color:var(--green-bright)">0</span>
             </div>
-            <button class="btn-logout" onclick="window.logout()">LOGOUT</button>
+            <button class="btn-logout" onclick="window.logout()" style="margin-left:10px;">LOGOUT</button>
         </div>
     </header>
 
