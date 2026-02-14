@@ -19,25 +19,42 @@ window.changeDefcon = function(val) {
 };
 
 function applyDefconUI(val) {
-    const colors = { "5": "#8db600", "3": "#ff8800", "1": "#ff0000" };
-    const selectedColor = colors[val] || "#8db600";
+    // Configuration des 5 niveaux de couleurs
+    const config = {
+        "1": { main: "rgb(237, 7, 7)",  bg: "rgba(237, 7, 7, 0.3)" },  // ROUGE VIF
+        "2": { main: "rgb(190, 39, 39)", bg: "rgba(190, 39, 39, 0.25)" }, // ROUGE SOMBRE
+        "3": { main: "rgb(193, 99, 11)", bg: "rgba(193, 99, 11, 0.2)" },  // ORANGE
+        "4": { main: "#8db600",          bg: "rgba(0, 0, 0, 0)" },        // HUD VERT
+        "5": { main: "#8db600",          bg: "rgba(0, 0, 0, 0)" }         // HUD VERT
+    };
+
+    const style = config[val] || config["5"];
     
     const selector = document.getElementById('defcon-selector');
     const dashboard = document.getElementById('dashboard');
     const widget = document.getElementById('op-widget');
+    const overlay = document.getElementById('defcon-overlay');
 
+    // Mise à jour du sélecteur (couleur du texte)
     if (selector) {
         selector.value = val;
-        selector.style.color = selectedColor;
+        selector.style.color = style.main;
     }
 
+    // Mise à jour de l'overlay (couleur du fond global)
+    if (overlay) {
+        overlay.style.background = style.bg;
+    }
+
+    // Mise à jour de la bordure du dashboard
     if (dashboard) {
-        dashboard.style.borderTop = `4px solid ${selectedColor}`;
-        dashboard.style.boxShadow = `inset 0 0 30px ${selectedColor}22`;
+        dashboard.style.borderColor = style.main;
+        dashboard.style.boxShadow = `inset 0 0 30px ${style.main}22`;
     }
 
+    // Gestion du clignotement d'alerte (DEFCON 1 et 2)
     if (widget) {
-        if (val === "1") {
+        if (val === "1" || val === "2") {
             widget.classList.add('blink-red-active');
         } else {
             widget.classList.remove('blink-red-active');
