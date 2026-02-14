@@ -57,7 +57,7 @@
                         <tr>
                             <th>OPÉRATEUR</th>
                             <th>STATUT</th>
-                            <th>DERNIÈRE ACTIVITÉ</th>
+                            <th>ACTIVITÉ</th>
                         </tr>
                     </thead>
                     <tbody id="conn-list">
@@ -81,9 +81,6 @@
                     <div class="vehicule-row"><input type="text" class="v-name" placeholder="V1"> <input type="text" class="v-pax" placeholder="Pax..."></div>
                     <div class="vehicule-row"><input type="text" class="v-name" placeholder="V2"> <input type="text" class="v-pax" placeholder="..."></div>
                     <div class="vehicule-row"><input type="text" class="v-name" placeholder="V3"> <input type="text" class="v-pax" placeholder="..."></div>
-                    <div class="vehicule-row"><input type="text" class="v-name" placeholder="V4"> <input type="text" class="v-pax" placeholder="..."></div>
-                    <div class="vehicule-row"><input type="text" class="v-name" placeholder="V5"> <input type="text" class="v-pax" placeholder="..."></div>
-                    <div class="vehicule-row"><input type="text" class="v-name" placeholder="V6"> <input type="text" class="v-pax" placeholder="..."></div>
                 </div>
                 <button onclick="launchOp()" style="width: 100%;">INITIALISER MISSION</button>
             </div>
@@ -181,71 +178,42 @@
 
 <script type="module" src="script.js"></script>
 
-    <script type="module">
-        // Ici commence ton code Firebase (initializeApp, etc.)
-        // ...
-    <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase, ref, set, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  // Ta configuration que j'ai récupérée sur ton image
-  const firebaseConfig = {
-    apiKey: "AIzaSyD837-8hJ_B4XPJuXTE8i29bAMTSy2VQo",
-    authDomain: "sfg-zancudo-division.firebaseapp.com",
-    databaseURL: "https://sfg-zancudo-division-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "sfg-zancudo-division",
-    storageBucket: "sfg-zancudo-division.firebasestorage.app",
-    messagingSenderId: "975179018138",
-    appId: "1:975179018138:web:45410cd990b2ee39a81423"
-  };
+    const firebaseConfig = {
+        apiKey: "AIzaSyD837-8hJ_B4XPJuXTE8i29bAMTSy2VQo",
+        authDomain: "sfg-zancudo-division.firebaseapp.com",
+        databaseURL: "https://sfg-zancudo-division-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "sfg-zancudo-division",
+        storageBucket: "sfg-zancudo-division.firebasestorage.app",
+        messagingSenderId: "975179018138",
+        appId: "1:975179018138:web:45410cd990b2ee39a81423"
+    };
 
-  // Initialisation
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-        // Permet au fichier script.js d'envoyer des données globales
-window.updateGlobalData = function(data) {
-  const globalRef = ref(db, 'global/');
-  set(globalRef, data);
-};
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-  // Fonction pour mettre à jour le statut
-  window.updateStatus = function(userName, status) {
-    const userRef = ref(db, 'users/' + userName);
-    
-    if (status === 'online') {
-      set(userRef, {
-        status: 'online',
-        last_changed: serverTimestamp()
-      });
-      // Si le mec ferme l'onglet, il passe en offline automatiquement
-      onDisconnect(userRef).set({
-        status: 'offline',
-        last_changed: serverTimestamp()
-      });
-    } else {
-      set(userRef, {
-        status: 'offline',
-        last_changed: serverTimestamp()
-      });
-    }
-  };
+    window.updateGlobalData = function(data) {
+        set(ref(db, 'global/'), data);
+    };
 
-// Écouter TOUTE la base de données (Users + Global)
-  const rootRef = ref(db, '/'); // On écoute la racine "/" pour tout avoir d'un coup
-  onValue(rootRef, (snapshot) => {
-    const data = snapshot.val();
-    console.log("Synchro Cloud complète :", data);
-    
-    // Cette fonction dans ton script.js va maintenant recevoir 
-    // à la fois les utilisateurs ET les missions/archives
-    if(window.refreshUIdisplay) window.refreshUIdisplay(data);
-  });
+    window.updateStatus = function(userName, status) {
+        const userRef = ref(db, 'users/' + userName);
+        if (status === 'online') {
+            set(userRef, { status: 'online', last_changed: serverTimestamp() });
+            onDisconnect(userRef).set({ status: 'offline', last_changed: serverTimestamp() });
+        } else {
+            set(userRef, { status: 'offline', last_changed: serverTimestamp() });
+        }
+    };
 
+    onValue(ref(db, '/'), (snapshot) => {
+        const data = snapshot.val();
+        if(window.refreshUIdisplay) window.refreshUIdisplay(data);
+    });
 </script>
+
 </body>
-
 </html>
-
-
-
-
