@@ -226,16 +226,20 @@ window.updateGlobalData = function(data) {
     }
   };
 
-  // Écouter les changements pour mettre à jour ton tableau en temps réel
-  const usersRef = ref(db, 'users/');
-  onValue(usersRef, (snapshot) => {
+// Écouter TOUTE la base de données (Users + Global)
+  const rootRef = ref(db, '/'); // On écoute la racine "/" pour tout avoir d'un coup
+  onValue(rootRef, (snapshot) => {
     const data = snapshot.val();
-    // Ici, on appellera une fonction pour rafraîchir ton affichage
-    console.log("Mise à jour des membres :", data);
+    console.log("Synchro Cloud complète :", data);
+    
+    // Cette fonction dans ton script.js va maintenant recevoir 
+    // à la fois les utilisateurs ET les missions/archives
     if(window.refreshUIdisplay) window.refreshUIdisplay(data);
   });
+
 </script>
 </body>
 
 </html>
+
 
