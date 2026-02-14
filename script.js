@@ -1,4 +1,4 @@
-// --- CONFIGURATION & ETAT ---
+// --- CONFIGURATION ---
 let activeOps = [];
 let archives = { hexa: [], res: [], abs: [], rap: [], comms: [] };
 let currentUser = "";
@@ -12,7 +12,7 @@ const membresAutorises = {
     "oregon": "pass11", "utha": "pass12", "maine": "pass13", "indiana": "pass14"
 };
 
-// --- SYNCHRONISATION ---
+// --- SYNCHRO CLOUD ---
 window.refreshUIdisplay = function(data) {
     if (!data) return;
     if (data.users) allUsersStatus = data.users;
@@ -32,109 +32,176 @@ function persist() {
 
 // --- CONNEXION ---
 window.handleLoginKey = (e) => { if(e.key === "Enter") window.accessGranted(); };
+
 window.accessGranted = function() {
-    let u = document.getElementById('user').value.toLowerCase();
-    let p = document.getElementById('pass').value;
+    const uEl = document.getElementById('user');
+    const pEl = document.getElementById('pass');
+    if(!uEl || !pEl) return;
+
+    let u = uEl.value.toLowerCase();
+    let p = pEl.value;
+
     if (membresAutorises[u] === p) {
         currentUser = u;
         if (window.updateStatus) window.updateStatus(u, 'online');
+        
         document.getElementById('display-user').textContent = u.toUpperCase();
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'flex';
+        
+        // Remplissage des menus
         const opt = Object.keys(membresAutorises).sort().map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
-        document.getElementById('comms-dest').innerHTML = opt;
-        document.getElementById('lead-op').innerHTML = opt;
+        const dest = document.getElementById('comms-dest');
+        const lead = document.getElementById('lead-op');
+        if(dest) dest.innerHTML = opt;
+        if(lead) lead.innerHTML = opt;
+
         updateConnUI();
-        setInterval(() => { document.getElementById('system-clock').textContent = "SYSTEM_TIME: " + new Date().toLocaleString(); }, 1000);
-    } else { alert("ACCÈS REFUSÉ"); }
+        setInterval(() => {
+            const clk = document.getElementById('system-clock');
+            if(clk) clk.textContent = "SYSTEM_TIME: " + new Date().toLocaleString();
+        }, 1000);
+    } else {
+        alert("ACCÈS REFUSÉ");
+    }
 };
 
-// --- NAVIGATION GENERALE ---
+// --- NAVIGATION ---
 window.showTab = function(tabId) {
-    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    // Active le bouton de nav
-    document.querySelectorAll('.nav-item').forEach(n => { if(n.getAttribute('onclick')?.includes(tabId)) n.classList.add('active'); });
+    const sections = document.querySelectorAll('.content-section');
+    const navs = document.querySelectorAll('.nav-item');
+    
+    sections.forEach(s => s.classList.remove('active'));
+    navs.forEach(n => n.classList.remove('active'));
+
+    const target = document.getElementById(tabId);
+    if(target) target.classList.add('active');
+
+    navs.forEach(n => {
+        if(n.getAttribute('onclick') && n.getAttribute('onclick').includes(tabId)) {
+            n.classList.add('active');
+        }
+    });
 };
 
-// --- LOGIQUE COMMUNE POUR TOUTES LES SECTIONS (Otages, Absences, Rapports, Comms) ---
+// --- GESTION DES SOUS-SECTIONS (Formulaires / Archives) ---
 window.toggleSub = (type, mode) => {
-    document.getElementById(type + '-form').style.display = mode === 'saisie' ? 'block' : 'none';
-    document.getElementById(type + '-archive-list').style.display = mode === 'archive' ? 'block' : 'none';
+    const f = document.getElementById(type + '-form');
+    const l = document.getElementById(type + '-archive-list');
+    if(f) f.style.display = (mode === 'saisie' ? 'block' : 'none');
+    if(l) l.style.display = (mode === 'archive' ? 'block' : 'none');
     if(mode === 'archive') renderList(type);
 };
 
-// Redirection des fonctions spécifiques du HTML vers la fonction commune
+// Redirections pour le HTML
 window.toggleCommsSub = (m) => window.toggleSub('comms', m);
 window.toggleAbsSub = (m) => window.toggleSub('abs', m);
 window.toggleRapSub = (m) => window.toggleSub('rap', m);
 
 function renderList(type) {
     const container = document.getElementById(type + '-archive-list');
-    if(!container || !archives[type]) return;
+    if(!container) return;
     
-    let html = archives[type].slice().reverse().map(item => {
-        if(type === 'comms' && item.to !== currentUser && item.from !== currentUser) return ''; // Filtre messages
+    const items = archives[type] || [];
+    container.innerHTML = items.slice().reverse().map(item => {
+        if(type === 'comms' && item.to !== currentUser && item.from !== currentUser) return '';
         return `
-            <div class="archive-card" style="border-left: 3px solid var(--green-bright); padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5);">
-                <small>${item.date} | PAR: ${item.agent?.toUpperCase()}</small><br>
+            <div class="archive-card" style="border-left:3px solid #8db600; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5);">
+                <small>${item.date || ''} | PAR: ${(item.agent || 'SYSTEM').toUpperCase()}</small><br>
                 ${item.title ? `<strong>${item.title}</strong><br>` : ''}
                 ${item.nom ? `<strong>${item.nom} ${item.prenom}</strong> [${item.grade}]<br>` : ''}
-                <p>${item.infos || item.text || item.raison || ''}</p>
+                <p style="margin:5px 0 0 0;">${item.infos || item.text || item.raison || ''}</p>
             </div>`;
-    }).join('');
-    container.innerHTML = html || "Aucune donnée.";
+    }).join('') || "AUCUNE DONNÉE ENREGISTRÉE";
 }
 
-// --- SAUVEGARDES ---
+// --- ACTIONS DE SAUVEGARDE ---
 window.saveOtage = function(type) {
-    const p = type === 'hexa' ? 'h-' : 'r-';
-    archives[type].push({
-        nom: document.getElementById(p+'nom').value,
-        prenom: document.getElementById(p+'prenom').value,
-        grade: document.getElementById(p+'grade').value,
-        infos: document.getElementById(p+'donne').value,
-        agent: currentUser, date: new Date().toLocaleString()
-    });
-    persist(); alert("ARCHIVÉ"); window.toggleSub(type, 'archive');
+    const p = (type === 'hexa' ? 'h-' : 'r-');
+    try {
+        archives[type].push({
+            nom: document.getElementById(p+'nom').value,
+            prenom: document.getElementById(p+'prenom').value,
+            grade: document.getElementById(p+'grade').value,
+            infos: document.getElementById(p+'donne').value,
+            agent: currentUser,
+            date: new Date().toLocaleString()
+        });
+        persist();
+        alert("ARCHIVÉ");
+        window.toggleSub(type, 'archive');
+    } catch(e) { alert("ERREUR: CHAMP MANQUANT"); }
 };
 
 window.sendComm = function() {
-    archives.comms.push({ from: currentUser, to: document.getElementById('comms-dest').value, text: document.getElementById('comms-msg').value, date: new Date().toLocaleString(), agent: currentUser });
-    persist(); alert("TRANSMIS"); window.toggleCommsSub('archive');
+    const msg = document.getElementById('comms-msg');
+    const dst = document.getElementById('comms-dest');
+    if(!msg || !msg.value) return;
+    archives.comms.push({ from: currentUser, to: dst.value, text: msg.value, date: new Date().toLocaleString(), agent: currentUser });
+    persist();
+    msg.value = "";
+    window.toggleSub('comms', 'archive');
 };
 
 window.saveRapport = function() {
-    archives.rap.push({ title: document.getElementById('rap-title').value, text: document.getElementById('rap-text').value, agent: currentUser, date: new Date().toLocaleString() });
-    persist(); alert("RAPPORT ENREGISTRÉ"); window.toggleRapSub('archive');
+    const t = document.getElementById('rap-title');
+    const txt = document.getElementById('rap-text');
+    archives.rap.push({ title: t.value, text: txt.value, agent: currentUser, date: new Date().toLocaleString() });
+    persist();
+    window.toggleSub('rap', 'archive');
 };
 
 window.saveAbsence = function() {
-    archives.abs.push({ title: "ABSENCE: " + document.getElementById('abs-call').value, raison: document.getElementById('abs-raison').value, agent: currentUser, date: "Du " + document.getElementById('abs-start').value + " au " + document.getElementById('abs-end').value });
-    persist(); alert("ABSENCE ARCHIVÉE"); window.toggleAbsSub('archive');
+    const call = document.getElementById('abs-call');
+    const raison = document.getElementById('abs-raison');
+    archives.abs.push({ 
+        title: "ABSENCE: " + (call ? call.value : "INCONNU"), 
+        raison: (raison ? raison.value : ""), 
+        agent: currentUser, 
+        date: new Date().toLocaleString() 
+    });
+    persist();
+    window.toggleSub('abs', 'archive');
 };
 
 // --- MISSIONS ---
 window.launchOp = function() {
-    activeOps.push({ lead: document.getElementById('lead-op').value, v1: document.getElementById('v1-name').value, p1: document.getElementById('v1-pax').value, date: new Date().toLocaleTimeString() });
-    persist(); window.showTab('op-running');
+    const lead = document.getElementById('lead-op');
+    const v1 = document.getElementById('v1-name');
+    const p1 = document.getElementById('v1-pax');
+    activeOps.push({ 
+        lead: lead ? lead.value : "Inconnu", 
+        v1: v1 ? v1.value : "N/A", 
+        p1: p1 ? p1.value : "0", 
+        date: new Date().toLocaleTimeString() 
+    });
+    persist();
+    window.showTab('op-running');
 };
 
 function updateOpsUI() {
-    document.getElementById('widget-count').textContent = activeOps.length;
-    document.getElementById('active-ops-list').innerHTML = activeOps.map((op, i) => `
-        <div class="op-card"><strong>LEAD: ${op.lead.toUpperCase()}</strong> (${op.date})<br>
-        V: ${op.v1} | PAX: ${op.p1}<br>
-        <button onclick="window.closeOp(${i})" style="background:var(--alert-red); padding:2px 5px; font-size:0.6rem;">STOP</button></div>
-    `).join('') || "RAS.";
+    const count = document.getElementById('widget-count');
+    const list = document.getElementById('active-ops-list');
+    if(count) count.textContent = activeOps.length;
+    if(list) {
+        list.innerHTML = activeOps.map((op, i) => `
+            <div class="op-card" style="border:1px solid #4b5320; padding:10px; margin-bottom:10px;">
+                <strong>LEAD: ${op.lead.toUpperCase()}</strong> (${op.date})<br>
+                VEHICULE: ${op.v1} | PAX: ${op.p1}<br>
+                <button onclick="window.closeOp(${i})" style="background:#8b0000; color:white; border:none; padding:5px; margin-top:5px; cursor:pointer;">TERMINER</button>
+            </div>`).join('') || "RAS";
+    }
 }
-window.closeOp = (i) => { activeOps.splice(i,1); persist(); };
+
+window.closeOp = (i) => { activeOps.splice(i,1); persist(); updateOpsUI(); };
 
 function updateConnUI() {
-    document.getElementById('conn-list').innerHTML = Object.keys(membresAutorises).sort().map(u => {
-        const on = allUsersStatus[u]?.status === 'online';
-        return `<tr><td style="color:#00d4ff">${u.toUpperCase()}</td><td style="color:${on?'#00ff00':'#f44'}">${on?'● ONLINE':'○ OFFLINE'}</td></tr>`;
+    const list = document.getElementById('conn-list');
+    if(!list) return;
+    list.innerHTML = Object.keys(membresAutorises).sort().map(u => {
+        const on = allUsersStatus[u] && allUsersStatus[u].status === 'online';
+        return `<tr><td style="color:#00d4ff">${u.toUpperCase()}</td><td style="color:${on?'#00ff00':'#ff4444'}">${on?'● EN LIGNE':'○ HORS LIGNE'}</td></tr>`;
     }).join('');
 }
+
 window.logout = () => { if(window.updateStatus) window.updateStatus(currentUser, 'offline'); location.reload(); };
