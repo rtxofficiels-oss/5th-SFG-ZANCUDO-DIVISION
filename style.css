@@ -142,8 +142,15 @@ nav { display: flex; gap: 8px; flex-wrap: wrap; }
 }
 .conn-table td { padding: 12px 15px; border-bottom: 1px solid rgba(75, 83, 32, 0.2); }
 
+@keyframes blink {
+    0% { opacity: 1; border-color: #ff0000; }
+    50% { opacity: 0.5; border-color: #550000; }
+    100% { opacity: 1; border-color: #ff0000; }
+}
+
 /* Scrollbar stylisée pour Chrome/Opera */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #000; }
 ::-webkit-scrollbar-thumb { background: var(--green-army); }
 ::-webkit-scrollbar-thumb:hover { background: var(--green-bright); }
+
