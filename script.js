@@ -2,6 +2,7 @@ let activeOps = [];
 let archives = { hexa: [], res: [], abs: [], rap: [], comms: [], ops: [] };
 let currentUser = "";
 let allUsersStatus = {};
+let currentDefcon = "5"; // Valeur par défaut
 
 const membresAutorises = {
     "november": "a", "alaska": "sf5th", "alabama": "pass1", "rhode": "5thSFG-Rhode06",
@@ -11,18 +12,50 @@ const membresAutorises = {
     "oregon": "pass11", "utha": "pass12", "maine": "pass13", "indiana": "pass14"
 };
 
+// --- GESTION VISUELLE DU DEFCON ---
+window.changeDefcon = function(val) {
+    currentDefcon = val;
+    persist(); // Sauvegarde immédiate dans Firebase
+};
+
+function applyDefconUI(val) {
+    const colors = { "5": "#8db600", "3": "#ff8800", "1": "#ff0000" };
+    const selectedColor = colors[val] || "#8db600";
+    
+    const selector = document.getElementById('defcon-selector');
+    const dashboard = document.getElementById('dashboard');
+    const widget = document.getElementById('op-widget');
+
+    if (selector) {
+        selector.value = val;
+        selector.style.color = selectedColor;
+    }
+
+    if (dashboard) {
+        dashboard.style.borderTop = `4px solid ${selectedColor}`;
+        dashboard.style.boxShadow = `inset 0 0 30px ${selectedColor}22`;
+    }
+
+    if (widget) {
+        if (val === "1") {
+            widget.classList.add('blink-red-active');
+        } else {
+            widget.classList.remove('blink-red-active');
+        }
+    }
+}
+
+// --- MISE À JOUR FIREBASE ---
 window.refreshUIdisplay = function(data) {
     if (!data) return;
     if (data.users) allUsersStatus = data.users;
     if (data.global) {
         archives = data.global.archives || { hexa: [], res: [], abs: [], rap: [], comms: [], ops: [] };
-        if (!archives.hexa) archives.hexa = [];
-        if (!archives.res) archives.res = [];
-        if (!archives.abs) archives.abs = [];
-        if (!archives.rap) archives.rap = [];
-        if (!archives.comms) archives.comms = [];
-        if (!archives.ops) archives.ops = [];
         activeOps = data.global.activeOps || [];
+        
+        // On récupère le Defcon depuis la base de données
+        currentDefcon = data.global.defcon || "5";
+        applyDefconUI(currentDefcon);
     }
     if (currentUser !== "") {
         updateConnUI();
@@ -31,9 +64,16 @@ window.refreshUIdisplay = function(data) {
 };
 
 function persist() {
-    if (window.updateGlobalData) window.updateGlobalData({ archives, activeOps });
+    if (window.updateGlobalData) {
+        window.updateGlobalData({ 
+            archives, 
+            activeOps, 
+            defcon: currentDefcon // On sauve le defcon ici
+        });
+    }
 }
 
+// --- LOGIQUE DE CONNEXION ---
 window.handleLoginKey = (e) => { if(e.key === "Enter") window.accessGranted(); };
 
 window.accessGranted = function() {
@@ -45,21 +85,25 @@ window.accessGranted = function() {
         document.getElementById('display-user').textContent = u.toUpperCase();
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'flex';
+        
         const opt = Object.keys(membresAutorises).sort().map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
         document.getElementById('comms-dest').innerHTML = opt;
         document.getElementById('lead-op').innerHTML = opt;
+        
         updateConnUI();
+        applyDefconUI(currentDefcon); // Appliquer au login
+
         setInterval(() => {
             document.getElementById('system-clock').textContent = "SYSTEM_TIME: " + new Date().toLocaleString();
         }, 1000);
     } else { alert("ACCÈS REFUSÉ"); }
 };
 
+// --- NAVIGATION & INTERFACE ---
 window.showTab = function(tabId) {
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    // Rafraîchir les listes quand on change d'onglet
     if(tabId === 'rapport') renderList('rap');
 };
 
@@ -73,66 +117,7 @@ window.toggleCommsSub = (m) => window.toggleSub('comms', m);
 window.toggleAbsSub = (m) => window.toggleSub('abs', m);
 window.toggleRapSub = (m) => window.toggleSub('rap', m);
 
-window.deleteArchive = function(type, index) {
-    const item = archives[type][index];
-    if (currentUser !== item.agent.toLowerCase() && currentUser !== "november") {
-        return alert("ACCÈS REFUSÉ.");
-    }
-    if(confirm("SUPPRIMER L'ENTRÉE ?")) {
-        archives[type].splice(index, 1);
-        persist();
-        renderList(type);
-    }
-};
-
-function renderList(type) {
-    const container = document.getElementById(type + '-archive-list');
-    if(!container) return;
-    const items = archives[type] || [];
-    container.innerHTML = items.map((item, i) => {
-        if(type === 'comms' && item.to !== currentUser && item.from !== currentUser) return '';
-        return `
-            <div class="archive-card" style="border-left:3px solid #8db600; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5); position:relative;">
-                <small>${item.date || ''} | PAR: ${(item.agent || 'SYSTEM').toUpperCase()}</small>
-                <button onclick="window.deleteArchive('${type}', ${i})" style="position:absolute; right:10px; top:10px; background:none; border:none; color:#ff4444; cursor:pointer;">[X]</button><br>
-                <strong>${item.title || 'SANS TITRE'}</strong><br>
-                ${item.nom ? `[${item.grade}] ${item.nom} ${item.prenom}<br>` : ''}
-                <p style="white-space: pre-line; margin-top:5px; color:#ccc;">${item.infos || item.text || item.raison || ''}</p>
-            </div>`;
-    }).reverse().join('') || "AUCUNE ARCHIVE";
-}
-
-window.saveOtage = function(type) {
-    if (!archives[type]) archives[type] = [];
-    const p = (type === 'hexa' ? 'h-' : 'r-');
-    archives[type].push({
-        nom: document.getElementById(p+'nom').value,
-        prenom: document.getElementById(p+'prenom').value,
-        grade: document.getElementById(p+'grade').value,
-        infos: document.getElementById(p+'donne').value,
-        agent: currentUser, date: new Date().toLocaleString()
-    });
-    persist(); alert("ARCHIVÉ"); window.toggleSub(type, 'archive');
-};
-
-window.sendComm = function() {
-    if (!archives.comms) archives.comms = [];
-    archives.comms.push({ from: currentUser, to: document.getElementById('comms-dest').value, text: document.getElementById('comms-msg').value, date: new Date().toLocaleString(), agent: currentUser });
-    persist(); document.getElementById('comms-msg').value = ""; window.toggleSub('comms', 'archive');
-};
-
-window.saveRapport = function() {
-    if (!archives.rap) archives.rap = [];
-    archives.rap.push({ title: document.getElementById('rap-title').value, text: document.getElementById('rap-text').value, agent: currentUser, date: new Date().toLocaleString() });
-    persist(); window.toggleSub('rap', 'archive');
-};
-
-window.saveAbsence = function() {
-    if (!archives.abs) archives.abs = [];
-    archives.abs.push({ title: "ABSENCE: " + document.getElementById('abs-call').value, raison: document.getElementById('abs-raison').value, agent: currentUser, date: new Date().toLocaleString() });
-    persist(); window.toggleSub('abs', 'archive');
-};
-
+// --- MISSIONS ---
 window.launchOp = function() {
     let vels = [];
     for (let i = 1; i <= 8; i++) {
@@ -142,7 +127,8 @@ window.launchOp = function() {
     }
     if (vels.length === 0) return alert("VIDE");
     activeOps.push({ lead: document.getElementById('lead-op').value, vehicules: vels, date: new Date().toLocaleString(), agent: currentUser });
-    persist(); window.showTab('op-running');
+    persist(); 
+    window.showTab('op-running');
     for (let i = 1; i <= 8; i++) { document.getElementById(`v${i}-name`).value = ""; document.getElementById(`v${i}-pax`).value = ""; }
 };
 
@@ -162,31 +148,12 @@ function updateOpsUI() {
     }
 }
 
-window.editOp = function(index) {
-    const op = activeOps[index];
-    if (currentUser !== op.lead.toLowerCase()) return alert("REFUSÉ");
-    window.showTab('depart');
-    document.getElementById('lead-op').value = op.lead.toLowerCase();
-    for (let i = 1; i <= 8; i++) {
-        if (op.vehicules[i-1]) {
-            document.getElementById(`v${i}-name`).value = op.vehicules[i-1].name;
-            document.getElementById(`v${i}-pax`).value = op.vehicules[i-1].pax;
-        }
-    }
-    activeOps.splice(index, 1);
-    persist();
-};
-
-// --- TERMINER ET ENVOYER EN RAPPORT ---
 window.closeOp = (i) => {
-    if(!confirm("TERMINER LA MISSION ET GÉNÉRER LE RAPPORT ?")) return;
+    if(!confirm("TERMINER ET GÉNÉRER LE RAPPORT ?")) return;
     const op = activeOps[i];
-    
-    // On crée le contenu du rapport
-    let details = `MISSION TERMINÉE\nLEAD OPERATION: ${op.lead.toUpperCase()}\nDÉBUT: ${op.date}\nFIN: ${new Date().toLocaleString()}\n\nDÉPLOIEMENT :\n`;
+    let details = `MISSION TERMINÉE\nLEAD: ${op.lead.toUpperCase()}\nDÉPLOIEMENT :\n`;
     op.vehicules.forEach(v => details += `- ${v.name} [PAX: ${v.pax}]\n`);
 
-    // On l'ajoute directement dans la catégorie RAPPORT
     if (!archives.rap) archives.rap = [];
     archives.rap.push({
         title: "FIN DE MISSION : " + op.lead.toUpperCase(),
@@ -198,7 +165,33 @@ window.closeOp = (i) => {
     activeOps.splice(i,1);
     persist();
     updateOpsUI();
-    alert("MISSION TERMINÉE - RAPPORT GÉNÉRÉ");
+};
+
+// --- AUTRES ARCHIVES ---
+window.deleteArchive = function(type, index) {
+    const item = archives[type][index];
+    if (currentUser !== item.agent.toLowerCase() && currentUser !== "november") return alert("REFUSÉ");
+    if(confirm("SUPPRIMER ?")) { archives[type].splice(index, 1); persist(); renderList(type); }
+};
+
+function renderList(type) {
+    const container = document.getElementById(type + '-archive-list');
+    if(!container) return;
+    const items = archives[type] || [];
+    container.innerHTML = items.map((item, i) => `
+        <div class="archive-card" style="border-left:3px solid #8db600; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5); position:relative;">
+            <small>${item.date} | PAR: ${item.agent.toUpperCase()}</small>
+            <button onclick="window.deleteArchive('${type}', ${i})" style="position:absolute; right:10px; top:10px; background:none; border:none; color:#ff4444; cursor:pointer;">[X]</button><br>
+            <strong>${item.title || 'INFO'}</strong>
+            <p style="white-space: pre-line; color:#ccc;">${item.infos || item.text || item.raison || ''}</p>
+        </div>`).reverse().join('') || "VIDE";
+}
+
+// --- SAUVEGARDES ---
+window.saveRapport = function() {
+    if (!archives.rap) archives.rap = [];
+    archives.rap.push({ title: document.getElementById('rap-title').value, text: document.getElementById('rap-text').value, agent: currentUser, date: new Date().toLocaleString() });
+    persist(); window.toggleSub('rap', 'archive');
 };
 
 function updateConnUI() {
