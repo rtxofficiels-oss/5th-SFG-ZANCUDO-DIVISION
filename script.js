@@ -17,18 +17,43 @@ window.onload = () => {
     setInterval(updateConnUI, 10000); 
 };
 
-// --- SYNCHRONISATION FIREBASE ---
+// --- SYNCHRONISATION CLOUD (Moteur Temps Réel) ---
 window.refreshUIdisplay = function(data) {
     if (!data) return;
-    if (data.users) { allUsersStatus = data.users; updateConnUI(); }
+    
+    // 1. On stocke les nouvelles données reçues
+    if (data.users) {
+        allUsersStatus = data.users;
+    }
+    
     if (data.global) {
         archives = data.global.archives || { hexa: [], res: [], abs: [], rap: [], comms: [] };
         activeOps = data.global.activeOps || [];
-        updateOpsUI();
-        // Rafraîchir les messages si on est sur l'onglet comms
-        const commsTab = document.getElementById('comms');
-        if(commsTab && commsTab.classList.contains('active')) displayComms();
     }
+
+    // 2. MISE À JOUR VISUELLE AUTOMATIQUE (Si connecté)
+    if (currentUser !== "") {
+        // Met à jour le tableau des connexions instantanément
+        updateConnUI(); 
+        
+        // Met à jour le compteur d'opérations en haut à droite
+        const widget = document.getElementById('widget-count');
+        if(widget) widget.textContent = activeOps.length;
+
+        // Met à jour la liste des missions si tu es sur l'onglet "Opérations"
+        updateOpsUI();
+
+        // Rafraîchissement intelligent de l'onglet actif
+        const activeTab = document.querySelector('.content-section.active');
+        if (activeTab) {
+            const id = activeTab.id;
+            if(id === 'comms') displayComms();
+            if(id === 'otages-hexa') displayArchive('hexa');
+            if(id === 'otages-res') displayArchive('res');
+            if(id === 'rapport') displayRapports(); // Si tu veux voir les rapports
+        }
+    }
+};
 };
 
 function persist() {
@@ -176,4 +201,5 @@ window.toggleRapSub = function(mode) {
     document.getElementById('rap-form').style.display = mode === 'saisie' ? 'block' : 'none';
     document.getElementById('rap-archive-list').style.display = mode === 'archive' ? 'block' : 'none';
 };
+
 
