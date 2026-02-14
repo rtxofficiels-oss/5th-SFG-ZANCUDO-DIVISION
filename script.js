@@ -11,26 +11,6 @@ const membresAutorises = {
     "oregon": "pass11", "utha": "pass12", "maine": "pass13", "indiana": "pass14"
 };
 
-// --- NOUVEAU : FONCTION DE BARRE DE STATUT ---
-function injectStatusBar() {
-    if (document.getElementById('tactical-bar')) return;
-    const bar = document.createElement('div');
-    bar.id = 'tactical-bar';
-    bar.style = "position:fixed; bottom:0; left:0; width:100%; height:25px; background:var(--green-army); color:black; font-family:monospace; font-size:10px; display:flex; align-items:center; padding:0 15px; z-index:9999; font-weight:bold; justify-content: space-between;";
-    bar.innerHTML = `
-        <div>STATUS: OPERATIONAL // AGENT: ${currentUser.toUpperCase()} // AUTH: LEVEL_4</div>
-        <div id="net-ping">NET_LATENCY: 24ms</div>
-        <div>SECURE_LINE: ACTIVE // NO_ENCRYPTION_LEAK</div>
-    `;
-    document.body.appendChild(bar);
-    
-    // Animation du ping pour faire "vivant"
-    setInterval(() => {
-        const ping = Math.floor(Math.random() * (35 - 18 + 1)) + 18;
-        if(document.getElementById('net-ping')) document.getElementById('net-ping').textContent = `NET_LATENCY: ${ping}ms`;
-    }, 3000);
-}
-
 window.refreshUIdisplay = function(data) {
     if (!data) return;
     if (data.users) allUsersStatus = data.users;
@@ -47,7 +27,6 @@ window.refreshUIdisplay = function(data) {
     if (currentUser !== "") {
         updateConnUI();
         updateOpsUI();
-        injectStatusBar(); // Activation de la barre
     }
 };
 
@@ -70,7 +49,6 @@ window.accessGranted = function() {
         document.getElementById('comms-dest').innerHTML = opt;
         document.getElementById('lead-op').innerHTML = opt;
         updateConnUI();
-        injectStatusBar(); // Lancement immédiat
         setInterval(() => {
             document.getElementById('system-clock').textContent = "SYSTEM_TIME: " + new Date().toLocaleString();
         }, 1000);
@@ -81,7 +59,8 @@ window.showTab = function(tabId) {
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    if(tabId === 'rapport') renderList('ops'); 
+    // Rafraîchir les listes quand on change d'onglet
+    if(tabId === 'rapport') renderList('rap');
 };
 
 window.toggleSub = (type, mode) => {
@@ -97,9 +76,9 @@ window.toggleRapSub = (m) => window.toggleSub('rap', m);
 window.deleteArchive = function(type, index) {
     const item = archives[type][index];
     if (currentUser !== item.agent.toLowerCase() && currentUser !== "november") {
-        return alert("SEUL L'AUTEUR OU LE COMMANDEMENT PEUT SUPPRIMER CETTE ARCHIVE.");
+        return alert("ACCÈS REFUSÉ.");
     }
-    if(confirm("SUPPRIMER DÉFINITIVEMENT CETTE ENTRÉE ?")) {
+    if(confirm("SUPPRIMER L'ENTRÉE ?")) {
         archives[type].splice(index, 1);
         persist();
         renderList(type);
@@ -115,12 +94,12 @@ function renderList(type) {
         return `
             <div class="archive-card" style="border-left:3px solid #8db600; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5); position:relative;">
                 <small>${item.date || ''} | PAR: ${(item.agent || 'SYSTEM').toUpperCase()}</small>
-                <button onclick="window.deleteArchive('${type}', ${i})" style="position:absolute; right:10px; top:10px; background:none; border:none; color:#ff4444; cursor:pointer; font-weight:bold;">[X]</button><br>
-                ${item.title ? `<strong>${item.title}</strong><br>` : ''}
-                ${item.nom ? `<strong>${item.nom} ${item.prenom}</strong> [${item.grade}]<br>` : ''}
-                <p style="white-space: pre-line;">${item.infos || item.text || item.raison || ''}</p>
+                <button onclick="window.deleteArchive('${type}', ${i})" style="position:absolute; right:10px; top:10px; background:none; border:none; color:#ff4444; cursor:pointer;">[X]</button><br>
+                <strong>${item.title || 'SANS TITRE'}</strong><br>
+                ${item.nom ? `[${item.grade}] ${item.nom} ${item.prenom}<br>` : ''}
+                <p style="white-space: pre-line; margin-top:5px; color:#ccc;">${item.infos || item.text || item.raison || ''}</p>
             </div>`;
-    }).reverse().join('') || "AUCUNE DONNÉE";
+    }).reverse().join('') || "AUCUNE ARCHIVE";
 }
 
 window.saveOtage = function(type) {
@@ -168,26 +147,24 @@ window.launchOp = function() {
 };
 
 function updateOpsUI() {
-    const count = document.getElementById('widget-count');
     const list = document.getElementById('active-ops-list');
-    if(count) count.textContent = activeOps.length;
+    document.getElementById('widget-count').textContent = activeOps.length;
     if(list) {
         list.innerHTML = activeOps.map((op, i) => `
-            <div class="op-card" style="border:1px solid #4b5320; padding:15px; margin-bottom:15px; background:rgba(0,0,0,0.8); border-left: 5px solid var(--green-bright);">
-                <strong style="color:var(--green-bright); font-size:1.1rem;">LEAD: ${op.lead.toUpperCase()}</strong> 
-                <span style="font-size:0.8rem; color:#666;">- ${op.date}</span><br><br>
-                ${op.vehicules.map(v => `<div style="font-size:0.9rem;">🛰️ ${v.name} | PAX: ${v.pax}</div>`).join('')}
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button onclick="window.editOp(${i})" style="background:#4b5320; color:white; border:none; padding:8px; flex:1; cursor:pointer; font-weight:bold;">MODIFIER</button>
-                    <button onclick="window.closeOp(${i})" style="background:#8b0000; color:white; border:none; padding:8px; flex:1; cursor:pointer; font-weight:bold;">TERMINER</button>
+            <div class="op-card" style="border:1px solid #4b5320; padding:15px; margin-bottom:10px; background:rgba(0,0,0,0.8);">
+                <strong style="color:var(--green-bright);">LEAD: ${op.lead.toUpperCase()}</strong><br>
+                ${op.vehicules.map(v => `<div>🛰️ ${v.name} | PAX: ${v.pax}</div>`).join('')}
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button onclick="window.editOp(${i})" style="flex:1; background:#4b5320; color:white;">MODIFIER</button>
+                    <button onclick="window.closeOp(${i})" style="flex:1; background:#8b0000; color:white;">TERMINER</button>
                 </div>
-            </div>`).join('') || "RAS - AUCUNE OPÉRATION";
+            </div>`).join('') || "AUCUNE OPÉRATION";
     }
 }
 
 window.editOp = function(index) {
     const op = activeOps[index];
-    if (currentUser !== op.lead.toLowerCase()) return alert("ACCÈS REFUSÉ : SEUL LE LEAD PEUT MODIFIER.");
+    if (currentUser !== op.lead.toLowerCase()) return alert("REFUSÉ");
     window.showTab('depart');
     document.getElementById('lead-op').value = op.lead.toLowerCase();
     for (let i = 1; i <= 8; i++) {
@@ -200,20 +177,28 @@ window.editOp = function(index) {
     persist();
 };
 
+// --- TERMINER ET ENVOYER EN RAPPORT ---
 window.closeOp = (i) => {
+    if(!confirm("TERMINER LA MISSION ET GÉNÉRER LE RAPPORT ?")) return;
     const op = activeOps[i];
-    if(!archives.ops) archives.ops = [];
-    let resume = `MISSION TERMINEE\nLEAD: ${op.lead.toUpperCase()}\n`;
-    op.vehicules.forEach(v => resume += `- ${v.name} (PAX: ${v.pax})\n`);
-    archives.ops.push({
-        title: "HISTORIQUE MISSION",
-        infos: resume,
+    
+    // On crée le contenu du rapport
+    let details = `MISSION TERMINÉE\nLEAD OPERATION: ${op.lead.toUpperCase()}\nDÉBUT: ${op.date}\nFIN: ${new Date().toLocaleString()}\n\nDÉPLOIEMENT :\n`;
+    op.vehicules.forEach(v => details += `- ${v.name} [PAX: ${v.pax}]\n`);
+
+    // On l'ajoute directement dans la catégorie RAPPORT
+    if (!archives.rap) archives.rap = [];
+    archives.rap.push({
+        title: "FIN DE MISSION : " + op.lead.toUpperCase(),
+        text: details,
         agent: currentUser,
         date: new Date().toLocaleString()
     });
+
     activeOps.splice(i,1);
     persist();
     updateOpsUI();
+    alert("MISSION TERMINÉE - RAPPORT GÉNÉRÉ");
 };
 
 function updateConnUI() {
