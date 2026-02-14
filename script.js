@@ -1,5 +1,6 @@
 // --- CONFIGURATION ---
 let activeOps = [];
+// Initialisation robuste pour éviter les erreurs "push of undefined"
 let archives = { hexa: [], res: [], abs: [], rap: [], comms: [] };
 let currentUser = "";
 let allUsersStatus = {};
@@ -17,7 +18,15 @@ window.refreshUIdisplay = function(data) {
     if (!data) return;
     if (data.users) allUsersStatus = data.users;
     if (data.global) {
-        archives = data.global.archives || { hexa: [], res: [], abs: [], rap: [], comms: [] };
+        // Sécurité : on s'assure que chaque catégorie existe dans l'objet archives
+        const incomingArchives = data.global.archives || {};
+        archives = {
+            hexa: incomingArchives.hexa || [],
+            res: incomingArchives.res || [],
+            abs: incomingArchives.abs || [],
+            rap: incomingArchives.rap || [],
+            comms: incomingArchives.comms || []
+        };
         activeOps = data.global.activeOps || [];
     }
     if (currentUser !== "") {
@@ -27,7 +36,9 @@ window.refreshUIdisplay = function(data) {
 };
 
 function persist() {
-    if (window.updateGlobalData) window.updateGlobalData({ archives, activeOps });
+    if (window.updateGlobalData) {
+        window.updateGlobalData({ archives, activeOps });
+    }
 }
 
 // --- CONNEXION ---
@@ -38,7 +49,7 @@ window.accessGranted = function() {
     const pEl = document.getElementById('pass');
     if(!uEl || !pEl) return;
 
-    let u = uEl.value.toLowerCase();
+    let u = uEl.value.toLowerCase().trim(); // Ajout de .trim() pour éviter les espaces accidentels
     let p = pEl.value;
 
     if (membresAutorises[u] === p) {
@@ -57,6 +68,9 @@ window.accessGranted = function() {
         if(lead) lead.innerHTML = opt;
 
         updateConnUI();
+        updateOpsUI();
+
+        // Horloge système
         setInterval(() => {
             const clk = document.getElementById('system-clock');
             if(clk) clk.textContent = "SYSTEM_TIME: " + new Date().toLocaleString();
@@ -77,6 +91,7 @@ window.showTab = function(tabId) {
     const target = document.getElementById(tabId);
     if(target) target.classList.add('active');
 
+    // Mise à jour visuelle du menu de navigation
     navs.forEach(n => {
         if(n.getAttribute('onclick') && n.getAttribute('onclick').includes(tabId)) {
             n.classList.add('active');
@@ -84,7 +99,7 @@ window.showTab = function(tabId) {
     });
 };
 
-// --- GESTION DES SOUS-SECTIONS (Formulaires / Archives) ---
+// --- GESTION DES SOUS-SECTIONS ---
 window.toggleSub = (type, mode) => {
     const f = document.getElementById(type + '-form');
     const l = document.getElementById(type + '-archive-list');
@@ -93,7 +108,6 @@ window.toggleSub = (type, mode) => {
     if(mode === 'archive') renderList(type);
 };
 
-// Redirections pour le HTML
 window.toggleCommsSub = (m) => window.toggleSub('comms', m);
 window.toggleAbsSub = (m) => window.toggleSub('abs', m);
 window.toggleRapSub = (m) => window.toggleSub('rap', m);
@@ -104,40 +118,54 @@ function renderList(type) {
     
     const items = archives[type] || [];
     container.innerHTML = items.slice().reverse().map(item => {
+        // Filtre pour les communications privées
         if(type === 'comms' && item.to !== currentUser && item.from !== currentUser) return '';
+        
         return `
-            <div class="archive-card" style="border-left:3px solid #8db600; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5);">
-                <small>${item.date || ''} | PAR: ${(item.agent || 'SYSTEM').toUpperCase()}</small><br>
-                ${item.title ? `<strong>${item.title}</strong><br>` : ''}
-                ${item.nom ? `<strong>${item.nom} ${item.prenom}</strong> [${item.grade}]<br>` : ''}
-                <p style="margin:5px 0 0 0;">${item.infos || item.text || item.raison || ''}</p>
+            <div class="archive-card" style="border-left:3px solid #8db600; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5); border-bottom: 1px solid #333;">
+                <small style="color:#aaa;">${item.date || ''} | PAR: ${(item.agent || 'SYSTEM').toUpperCase()}</small><br>
+                ${item.title ? `<strong style="color:var(--green-bright);">${item.title}</strong><br>` : ''}
+                ${item.nom ? `<strong style="color:#00d4ff;">${item.nom} ${item.prenom}</strong> [${item.grade}]<br>` : ''}
+                <p style="margin:5px 0 0 0; white-space: pre-wrap;">${item.infos || item.text || item.raison || ''}</p>
             </div>`;
     }).join('') || "AUCUNE DONNÉE ENREGISTRÉE";
 }
 
-// --- ACTIONS DE SAUVEGARDE ---
+// --- ACTIONS DE SAUVEGARDE (SÉCURISÉES) ---
 window.saveOtage = function(type) {
     const p = (type === 'hexa' ? 'h-' : 'r-');
-    try {
-        archives[type].push({
-            nom: document.getElementById(p+'nom').value,
-            prenom: document.getElementById(p+'prenom').value,
-            grade: document.getElementById(p+'grade').value,
-            infos: document.getElementById(p+'donne').value,
-            agent: currentUser,
-            date: new Date().toLocaleString()
-        });
-        persist();
-        alert("ARCHIVÉ");
-        window.toggleSub(type, 'archive');
-    } catch(e) { alert("ERREUR: CHAMP MANQUANT"); }
+    const nom = document.getElementById(p+'nom').value;
+    if(!nom) return alert("NOM OBLIGATOIRE");
+
+    if(!archives[type]) archives[type] = [];
+    
+    archives[type].push({
+        nom: nom,
+        prenom: document.getElementById(p+'prenom').value,
+        grade: document.getElementById(p+'grade').value,
+        infos: document.getElementById(p+'donne').value,
+        agent: currentUser,
+        date: new Date().toLocaleString()
+    });
+    persist();
+    alert("DOSSIER ARCHIVÉ");
+    window.toggleSub(type, 'archive');
 };
 
 window.sendComm = function() {
     const msg = document.getElementById('comms-msg');
     const dst = document.getElementById('comms-dest');
     if(!msg || !msg.value) return;
-    archives.comms.push({ from: currentUser, to: dst.value, text: msg.value, date: new Date().toLocaleString(), agent: currentUser });
+
+    if(!archives.comms) archives.comms = [];
+    
+    archives.comms.push({ 
+        from: currentUser, 
+        to: dst.value, 
+        text: msg.value, 
+        date: new Date().toLocaleString(), 
+        agent: currentUser 
+    });
     persist();
     msg.value = "";
     window.toggleSub('comms', 'archive');
@@ -146,16 +174,29 @@ window.sendComm = function() {
 window.saveRapport = function() {
     const t = document.getElementById('rap-title');
     const txt = document.getElementById('rap-text');
-    archives.rap.push({ title: t.value, text: txt.value, agent: currentUser, date: new Date().toLocaleString() });
+    if(!t.value || !txt.value) return alert("CHAMPS VIDES");
+
+    if(!archives.rap) archives.rap = [];
+
+    archives.rap.push({ 
+        title: t.value, 
+        text: txt.value, 
+        agent: currentUser, 
+        date: new Date().toLocaleString() 
+    });
     persist();
+    t.value = ""; txt.value = "";
     window.toggleSub('rap', 'archive');
 };
 
 window.saveAbsence = function() {
     const call = document.getElementById('abs-call');
     const raison = document.getElementById('abs-raison');
+    
+    if(!archives.abs) archives.abs = [];
+
     archives.abs.push({ 
-        title: "ABSENCE: " + (call ? call.value : "INCONNU"), 
+        title: "ABSENCE: " + (call ? call.value : "NON SPÉCIFIÉ"), 
         raison: (raison ? raison.value : ""), 
         agent: currentUser, 
         date: new Date().toLocaleString() 
@@ -164,16 +205,14 @@ window.saveAbsence = function() {
     window.toggleSub('abs', 'archive');
 };
 
-// --- MISSIONS (Version 8 Véhicules) ---
+// --- MISSIONS (8 Véhicules) ---
 window.launchOp = function() {
     let missionVehicules = [];
-    
-    // On boucle de 1 à 8 pour récupérer les données
     for (let i = 1; i <= 8; i++) {
-        let name = document.getElementById(`v${i}-name`).value;
-        let pax = document.getElementById(`v${i}-pax`).value;
-        if (name !== "") {
-            missionVehicules.push({ name: name, pax: pax });
+        let nameEl = document.getElementById(`v${i}-name`);
+        let paxEl = document.getElementById(`v${i}-pax`);
+        if (nameEl && nameEl.value.trim() !== "") {
+            missionVehicules.push({ name: nameEl.value, pax: paxEl.value });
         }
     }
 
@@ -186,9 +225,10 @@ window.launchOp = function() {
     });
 
     persist();
+    updateOpsUI();
     window.showTab('op-running');
     
-    // Nettoyage des champs après lancement
+    // Reset champs
     for (let i = 1; i <= 8; i++) {
         document.getElementById(`v${i}-name`).value = "";
         document.getElementById(`v${i}-pax`).value = "";
@@ -201,16 +241,22 @@ function updateOpsUI() {
     if(count) count.textContent = activeOps.length;
     if(list) {
         list.innerHTML = activeOps.map((op, i) => `
-            <div class="op-card" style="border:1px solid #4b5320; padding:15px; margin-bottom:15px; background:rgba(0,0,0,0.8);">
+            <div class="op-card" style="border:1px solid #4b5320; padding:15px; margin-bottom:15px; background:rgba(0,0,0,0.8); border-left: 5px solid var(--green-bright);">
                 <strong style="color:var(--green-bright); font-size:1.1rem;">LEAD: ${op.lead.toUpperCase()}</strong> 
-                <span style="font-size:0.8rem; color:#666;">- ${op.date}</span><br><br>
-                ${op.vehicules.map(v => `<div style="font-size:0.9rem;">🛰️ ${v.name} | PAX: ${v.pax}</div>`).join('')}
-                <button onclick="window.closeOp(${i})" style="background:#8b0000; color:white; border:none; padding:8px; margin-top:10px; width:100%; cursor:pointer;">TERMINER LA MISSION</button>
-            </div>`).join('') || "RAS - AUCUNE OPÉRATION";
+                <span style="font-size:0.8rem; color:#666;">- Lancé à ${op.date}</span><br><br>
+                ${op.vehicules.map(v => `<div style="font-size:0.9rem; margin-bottom:3px;">🛰️ ${v.name} | <span style="color:#00d4ff">PAX: ${v.pax}</span></div>`).join('')}
+                <button onclick="window.closeOp(${i})" style="background:#8b0000; color:white; border:none; padding:10px; margin-top:15px; width:100%; cursor:pointer; font-weight:bold;">TERMINER LA MISSION</button>
+            </div>`).join('') || "<p style='color:#666;'>RAS - AUCUNE OPÉRATION EN COURS</p>";
     }
 }
 
-window.closeOp = (i) => { activeOps.splice(i,1); persist(); updateOpsUI(); };
+window.closeOp = (i) => { 
+    if(confirm("Confirmer la fin de mission ?")) {
+        activeOps.splice(i,1); 
+        persist(); 
+        updateOpsUI(); 
+    }
+};
 
 function updateConnUI() {
     const list = document.getElementById('conn-list');
@@ -221,5 +267,7 @@ function updateConnUI() {
     }).join('');
 }
 
-window.logout = () => { if(window.updateStatus) window.updateStatus(currentUser, 'offline'); location.reload(); };
-
+window.logout = () => { 
+    if(window.updateStatus) window.updateStatus(currentUser, 'offline'); 
+    location.reload(); 
+};
