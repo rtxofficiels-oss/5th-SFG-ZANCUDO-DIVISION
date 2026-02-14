@@ -36,12 +36,13 @@ function persist() {
 
 function updateClock() {
     const now = new Date();
-    document.getElementById('system-clock').textContent = "SYSTEM_TIME: " + now.toLocaleString();
+    const clockEl = document.getElementById('system-clock');
+    if(clockEl) clockEl.textContent = "SYSTEM_TIME: " + now.toLocaleString();
 }
 
-function handleLoginKey(e) { if(e.key === "Enter") accessGranted(); }
+window.handleLoginKey = function(e) { if(e.key === "Enter") accessGranted(); };
 
-function accessGranted() {
+window.accessGranted = function() {
     let u = document.getElementById('user').value.toLowerCase();
     let p = document.getElementById('pass').value;
     if (membresAutorises[u] === p) {
@@ -55,15 +56,15 @@ function accessGranted() {
         document.getElementById('comms-dest').innerHTML = optionsHTML;
         document.getElementById('lead-op').innerHTML = optionsHTML;
     } else { alert("ACCÈS REFUSÉ"); }
-}
+};
 
-function logout() {
+window.logout = function() {
     if(currentUser && window.updateStatus) window.updateStatus(currentUser, 'offline');
     location.reload(); 
-}
+};
 
 // --- COMMUNICATIONS ---
-function sendComm() {
+window.sendComm = function() {
     const dest = document.getElementById('comms-dest').value;
     const msg = document.getElementById('comms-msg').value;
     if(!msg) return alert("MESSAGE VIDE");
@@ -73,7 +74,7 @@ function sendComm() {
     alert("TRANSMISSION RÉUSSIE");
     document.getElementById('comms-msg').value = "";
     toggleCommsSub('archive');
-}
+};
 
 function displayComms() {
     const list = document.getElementById('comms-archive-list');
@@ -90,18 +91,29 @@ function displayComms() {
         </div>`).join('');
 }
 
-function toggleCommsSub(mode) {
+window.toggleCommsSub = function(mode) {
     document.getElementById('comms-form').style.display = mode === 'saisie' ? 'block' : 'none';
     document.getElementById('comms-archive-list').style.display = mode === 'archive' ? 'block' : 'none';
     if(mode === 'archive') displayComms();
-}
+};
 
 // --- NAVIGATION & UI ---
-function showTab(tabId) {
+window.showTab = function(tabId) {
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
+    const target = document.getElementById(tabId);
+    if(target) target.classList.add('active');
+    
+    // Mise à jour visuelle des onglets
+    document.querySelectorAll('.nav-item').forEach(nav => {
+        nav.classList.remove('active');
+        if(nav.getAttribute('onclick') && nav.getAttribute('onclick').includes(tabId)) {
+            nav.classList.add('active');
+        }
+    });
+
     if(tabId === 'comms') displayComms();
-}
+    if(tabId === 'connexions') updateConnUI();
+};
 
 function updateConnUI() {
     const list = document.getElementById('conn-list');
@@ -112,9 +124,23 @@ function updateConnUI() {
     }).join('');
 }
 
-// (Les autres fonctions vides pour éviter les erreurs)
+// Fonctions supplémentaires pour éviter les erreurs ReferenceError
+window.saveOtage = function(type) { alert("Fonction de sauvegarde otage à configurer"); };
+window.saveAbsence = function() { alert("Fonction de sauvegarde absence à configurer"); };
+window.saveRapport = function() { alert("Fonction de sauvegarde rapport à configurer"); };
+window.launchOp = function() { alert("Fonction de lancement d'opération à configurer"); };
+window.toggleSub = function(type, mode) {
+    document.getElementById(`${type}-form`).style.display = mode === 'saisie' ? 'block' : 'none';
+    document.getElementById(`${type}-archive-list`).style.display = mode === 'archive' ? 'block' : 'none';
+};
+window.toggleAbsSub = function(mode) {
+    document.getElementById('abs-form').style.display = mode === 'saisie' ? 'block' : 'none';
+    document.getElementById('abs-archive-list').style.display = mode === 'archive' ? 'block' : 'none';
+};
+window.toggleRapSub = function(mode) {
+    document.getElementById('rap-form').style.display = mode === 'saisie' ? 'block' : 'none';
+    document.getElementById('rap-archive-list').style.display = mode === 'archive' ? 'block' : 'none';
+};
+
 function updateOpsUI() {} 
-function launchOp() {}
 function finishOp() {}
-function saveRapport() {}
-function toggleRapSub() {}
