@@ -1,5 +1,5 @@
 let activeOps = [];
-let archives = { hexa: [], res: [], abs: [], rap: [], comms: [], ops: [] }; // Ajout de ops
+let archives = { hexa: [], res: [], abs: [], rap: [], comms: [], ops: [] };
 let currentUser = "";
 let allUsersStatus = {};
 
@@ -11,6 +11,26 @@ const membresAutorises = {
     "oregon": "pass11", "utha": "pass12", "maine": "pass13", "indiana": "pass14"
 };
 
+// --- NOUVEAU : FONCTION DE BARRE DE STATUT ---
+function injectStatusBar() {
+    if (document.getElementById('tactical-bar')) return;
+    const bar = document.createElement('div');
+    bar.id = 'tactical-bar';
+    bar.style = "position:fixed; bottom:0; left:0; width:100%; height:25px; background:var(--green-army); color:black; font-family:monospace; font-size:10px; display:flex; align-items:center; padding:0 15px; z-index:9999; font-weight:bold; justify-content: space-between;";
+    bar.innerHTML = `
+        <div>STATUS: OPERATIONAL // AGENT: ${currentUser.toUpperCase()} // AUTH: LEVEL_4</div>
+        <div id="net-ping">NET_LATENCY: 24ms</div>
+        <div>SECURE_LINE: ACTIVE // NO_ENCRYPTION_LEAK</div>
+    `;
+    document.body.appendChild(bar);
+    
+    // Animation du ping pour faire "vivant"
+    setInterval(() => {
+        const ping = Math.floor(Math.random() * (35 - 18 + 1)) + 18;
+        if(document.getElementById('net-ping')) document.getElementById('net-ping').textContent = `NET_LATENCY: ${ping}ms`;
+    }, 3000);
+}
+
 window.refreshUIdisplay = function(data) {
     if (!data) return;
     if (data.users) allUsersStatus = data.users;
@@ -21,12 +41,13 @@ window.refreshUIdisplay = function(data) {
         if (!archives.abs) archives.abs = [];
         if (!archives.rap) archives.rap = [];
         if (!archives.comms) archives.comms = [];
-        if (!archives.ops) archives.ops = []; // Sécurité
+        if (!archives.ops) archives.ops = [];
         activeOps = data.global.activeOps || [];
     }
     if (currentUser !== "") {
         updateConnUI();
         updateOpsUI();
+        injectStatusBar(); // Activation de la barre
     }
 };
 
@@ -49,6 +70,7 @@ window.accessGranted = function() {
         document.getElementById('comms-dest').innerHTML = opt;
         document.getElementById('lead-op').innerHTML = opt;
         updateConnUI();
+        injectStatusBar(); // Lancement immédiat
         setInterval(() => {
             document.getElementById('system-clock').textContent = "SYSTEM_TIME: " + new Date().toLocaleString();
         }, 1000);
@@ -59,7 +81,6 @@ window.showTab = function(tabId) {
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    // Si on va sur l'onglet Rapport, on peut aussi y voir les archives d'opérations
     if(tabId === 'rapport') renderList('ops'); 
 };
 
@@ -73,7 +94,6 @@ window.toggleCommsSub = (m) => window.toggleSub('comms', m);
 window.toggleAbsSub = (m) => window.toggleSub('abs', m);
 window.toggleRapSub = (m) => window.toggleSub('rap', m);
 
-// --- FONCTION DE SUPPRESSION D'ARCHIVE ---
 window.deleteArchive = function(type, index) {
     const item = archives[type][index];
     if (currentUser !== item.agent.toLowerCase() && currentUser !== "november") {
@@ -180,26 +200,20 @@ window.editOp = function(index) {
     persist();
 };
 
-// --- TERMINER ET ARCHIVER L'OP ---
 window.closeOp = (i) => {
     const op = activeOps[i];
     if(!archives.ops) archives.ops = [];
-    
-    // On crée un texte résumé pour l'archive
     let resume = `MISSION TERMINEE\nLEAD: ${op.lead.toUpperCase()}\n`;
     op.vehicules.forEach(v => resume += `- ${v.name} (PAX: ${v.pax})\n`);
-
     archives.ops.push({
         title: "HISTORIQUE MISSION",
         infos: resume,
         agent: currentUser,
         date: new Date().toLocaleString()
     });
-
     activeOps.splice(i,1);
     persist();
     updateOpsUI();
-    alert("MISSION ARCHIVÉE DANS L'ONGLET RAPPORT");
 };
 
 function updateConnUI() {
