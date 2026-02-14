@@ -15,14 +15,12 @@ window.refreshUIdisplay = function(data) {
     if (!data) return;
     if (data.users) allUsersStatus = data.users;
     if (data.global) {
-        // Sécurité : on initialise si les clés n'existent pas dans Firebase
         archives = data.global.archives || { hexa: [], res: [], abs: [], rap: [], comms: [] };
         if (!archives.hexa) archives.hexa = [];
         if (!archives.res) archives.res = [];
         if (!archives.abs) archives.abs = [];
         if (!archives.rap) archives.rap = [];
         if (!archives.comms) archives.comms = [];
-        
         activeOps = data.global.activeOps || [];
     }
     if (currentUser !== "") {
@@ -134,15 +132,45 @@ window.launchOp = function() {
     for (let i = 1; i <= 8; i++) { document.getElementById(`v${i}-name`).value = ""; document.getElementById(`v${i}-pax`).value = ""; }
 };
 
+// --- RENDU DES MISSIONS AVEC BOUTON MODIFIER ---
 function updateOpsUI() {
-    document.getElementById('widget-count').textContent = activeOps.length;
-    document.getElementById('active-ops-list').innerHTML = activeOps.map((op, i) => `
-        <div class="op-card" style="border:1px solid #4b5320; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.8);">
-            <strong>LEAD: ${op.lead.toUpperCase()}</strong><br>
-            ${op.vehicules.map(v => `<div>🛰️ ${v.name} | PAX: ${v.pax}</div>`).join('')}
-            <button onclick="window.closeOp(${i})" style="background:#8b0000; color:white; width:100%; margin-top:5px;">TERMINER</button>
-        </div>`).join('') || "AUCUNE OP";
+    const count = document.getElementById('widget-count');
+    const list = document.getElementById('active-ops-list');
+    if(count) count.textContent = activeOps.length;
+    if(list) {
+        list.innerHTML = activeOps.map((op, i) => `
+            <div class="op-card" style="border:1px solid #4b5320; padding:15px; margin-bottom:15px; background:rgba(0,0,0,0.8); border-left: 5px solid var(--green-bright);">
+                <strong style="color:var(--green-bright); font-size:1.1rem;">LEAD: ${op.lead.toUpperCase()}</strong> 
+                <span style="font-size:0.8rem; color:#666;">- ${op.date}</span><br><br>
+                ${op.vehicules.map(v => `<div style="font-size:0.9rem;">🛰️ ${v.name} | PAX: ${v.pax}</div>`).join('')}
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button onclick="window.editOp(${i})" style="background:#4b5320; color:white; border:none; padding:8px; flex:1; cursor:pointer; font-weight:bold;">MODIFIER</button>
+                    <button onclick="window.closeOp(${i})" style="background:#8b0000; color:white; border:none; padding:8px; flex:1; cursor:pointer; font-weight:bold;">TERMINER</button>
+                </div>
+            </div>`).join('') || "RAS - AUCUNE OPÉRATION";
+    }
 }
+
+window.editOp = function(index) {
+    const op = activeOps[index];
+    if (currentUser !== op.lead.toLowerCase()) {
+        return alert("ACCÈS REFUSÉ : SEUL LE LEAD (" + op.lead.toUpperCase() + ") PEUT MODIFIER.");
+    }
+    window.showTab('depart');
+    document.getElementById('lead-op').value = op.lead.toLowerCase();
+    for (let i = 1; i <= 8; i++) {
+        if (op.vehicules[i-1]) {
+            document.getElementById(`v${i}-name`).value = op.vehicules[i-1].name;
+            document.getElementById(`v${i}-pax`).value = op.vehicules[i-1].pax;
+        } else {
+            document.getElementById(`v${i}-name`).value = "";
+            document.getElementById(`v${i}-pax`).value = "";
+        }
+    }
+    activeOps.splice(index, 1);
+    persist();
+    alert("MODE MODIFICATION : METTEZ À JOUR ET RE-VALIDEZ.");
+};
 
 window.closeOp = (i) => { activeOps.splice(i,1); persist(); updateOpsUI(); };
 
