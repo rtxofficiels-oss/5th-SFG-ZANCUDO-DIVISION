@@ -62,14 +62,44 @@
             <div id="active-ops-list"></div>
         </div>
 
-        <div id="depart" class="content-section">
-            <h2>> NOUVEAU DÉPLOIEMENT</h2>
-            <label>LEAD OPERATION :</label>
-            <select id="lead-op"></select>
-            <input type="text" id="v1-name" placeholder="Véhicule (ex: Insurgent)">
-            <input type="text" id="v1-pax" placeholder="Nombre de PAX">
-            <button onclick="window.launchOp()">INITIALISER MISSION</button>
+       <div id="depart" class="content-section">
+    <h2>> NOUVEAU DÉPLOIEMENT</h2>
+    <div style="max-width: 600px; background: rgba(0,0,0,0.8); padding: 20px; border: 1px solid var(--green-army);">
+        <label>LEAD OPERATION :</label>
+        <select id="lead-op"></select>
+
+        <div style="margin-top: 20px;">
+            <div class="vehicule-row" style="font-weight: bold; color: var(--green-bright); display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>VÉHICULE</div><div>PAX</div>
+            </div>
+            <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" id="v1-name" placeholder="V1"> <input type="text" id="v1-pax" placeholder="Pax">
+            </div>
+            <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" id="v2-name" placeholder="V2"> <input type="text" id="v2-pax" placeholder="Pax">
+            </div>
+            <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" id="v3-name" placeholder="V3"> <input type="text" id="v3-pax" placeholder="Pax">
+            </div>
+            <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" id="v4-name" placeholder="V4"> <input type="text" id="v4-pax" placeholder="Pax">
+            </div>
+            <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" id="v5-name" placeholder="V5"> <input type="text" id="v5-pax" placeholder="Pax">
+            </div>
+            <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" id="v6-name" placeholder="V6"> <input type="text" id="v6-pax" placeholder="Pax">
+            </div>
+            <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" id="v7-name" placeholder="V7"> <input type="text" id="v7-pax" placeholder="Pax">
+            </div>
+            <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" id="v8-name" placeholder="V8"> <input type="text" id="v8-pax" placeholder="Pax">
+            </div>
         </div>
+        <button onclick="window.launchOp()" style="width: 100%; margin-top:15px;">INITIALISER MISSION</button>
+    </div>
+</div>
 
         <div id="absence" class="content-section">
             <h2>> GESTION DES ABSENCES</h2>
@@ -185,3 +215,4 @@
 </script>
 </body>
 </html>
+
