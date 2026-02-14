@@ -26,30 +26,27 @@ const membresAutorises = {
 
 // --- INITIALISATION ---
 window.onload = () => {
-    // On ne charge plus depuis localStorage, Firebase s'en occupe via refreshUIdisplay
     setInterval(updateClock, 1000);
-    setInterval(updateConnUI, 10000); // Rafraîchit l'affichage du temps écoulé
+    setInterval(updateConnUI, 10000); 
 };
 
-// Cette fonction est appelée par le code Firebase que tu as mis dans index.html
 window.refreshUIdisplay = function(data) {
     if (!data) return;
     
-    // 1. Mise à jour des statuts de connexion
     if (data.users) {
         allUsersStatus = data.users;
         updateConnUI();
     }
     
-    // 2. Mise à jour des données globales (Archives & Ops)
     if (data.global) {
         archives = data.global.archives || archives;
         activeOps = data.global.activeOps || [];
         updateOpsUI();
+        // Rafraîchir l'affichage des messages si on est sur l'onglet comms
+        if(document.getElementById('comms').classList.contains('active')) displayComms();
     }
 };
 
-// Remplace l'ancien persist() pour écrire sur le Cloud
 function persist() {
     if (typeof window.updateGlobalData === 'function') {
         window.updateGlobalData({ archives, activeOps });
@@ -69,8 +66,6 @@ function accessGranted() {
 
     if (membresAutorises.hasOwnProperty(u) && membresAutorises[u] === p) {
         currentUser = u;
-        
-        // Signalement de connexion à Firebase
         if (window.updateStatus) window.updateStatus(u, 'online');
 
         document.getElementById('display-user').textContent = u.toUpperCase();
@@ -98,7 +93,6 @@ function logout() {
     document.getElementById('login-screen').style.display = 'flex';
 }
 
-// --- INTERFACE DES CONNEXIONS (TEMPS RÉEL) ---
 function updateConnUI() {
     const list = document.getElementById('conn-list');
     if(!list) return;
@@ -120,11 +114,7 @@ function updateConnUI() {
             timeInfo = "Jamais connecté";
         }
 
-        return `<tr>
-            <td>${u.toUpperCase()}</td>
-            <td>${status}</td>
-            <td>${timeInfo}</td>
-        </tr>`;
+        return `<tr><td>${u.toUpperCase()}</td><td>${status}</td><td>${timeInfo}</td></tr>`;
     }).join('');
 }
 
@@ -137,20 +127,70 @@ function formatTimeAgo(timestamp) {
     return Math.floor(diff / 86400) + "j";
 }
 
-// --- RESTE DES FONCTIONS (OPÉRATIONS / ARCHIVES) ---
-// Note: Le reste de tes fonctions (showTab, launchOp, etc.) reste identique 
-// mais elles utilisent maintenant le persist() synchronisé.
+// --- GESTION DES COMMUNICATIONS ---
+
+function sendComm() {
+    const dest = document.getElementById('comms-dest').value;
+    const msg = document.getElementById('comms-msg').value;
+    if(!msg) return alert("MESSAGE VIDE");
+
+    if (!archives.comms) archives.comms = [];
+    
+    archives.comms.push({
+        from: currentUser,
+        to: dest,
+        text: msg,
+        time: new Date().toLocaleString()
+    });
+
+    persist();
+    alert("TRANSMISSION RÉUSSIE");
+    document.getElementById('comms-msg').value = "";
+    toggleCommsSub('archive');
+}
+
+function displayComms() {
+    const list = document.getElementById('comms-archive-list');
+    if(!list) return;
+
+    const mesMessages = (archives.comms || []).filter(c => 
+        c.from.toLowerCase() === currentUser.toLowerCase() || 
+        c.to.toLowerCase() === currentUser.toLowerCase()
+    );
+
+    if (mesMessages.length === 0) {
+        list.innerHTML = "<p style='color:#666; font-style:italic;'>Aucune transmission.</p>";
+        return;
+    }
+
+    list.innerHTML = mesMessages.slice().reverse().map(c => {
+        const isFromMe = c.from.toLowerCase() === currentUser.toLowerCase();
+        const color = isFromMe ? '#00ff00' : '#00d4ff';
+        return `
+            <div style="border:1px solid ${color}; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5);">
+                <small style="color:#888">${c.time}</small><br>
+                <strong style="color:${color}">${isFromMe ? "À: " + c.to.toUpperCase() : "DE: " + c.from.toUpperCase()}</strong>
+                <p style="margin:5px 0 0 0;">${c.text}</p>
+            </div>`;
+    }).join('');
+}
+
+function toggleCommsSub(mode) {
+    document.getElementById('comms-form').style.display = mode === 'saisie' ? 'block' : 'none';
+    document.getElementById('comms-archive-list').style.display = mode === 'archive' ? 'block' : 'none';
+    document.getElementById('sub-comms-saisie').classList.toggle('active', mode === 'saisie');
+    document.getElementById('sub-comms-archive').classList.toggle('active', mode === 'archive');
+    if(mode === 'archive') displayComms();
+}
+
+// --- RESTE DU CODE ---
 
 function showTab(tabId) {
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    
-    document.querySelectorAll('.nav-item').forEach(item => {
-        if(item.getAttribute('onclick') && item.getAttribute('onclick').includes(`'${tabId}'`)) item.classList.add('active');
-    });
-
     if(tabId === 'connexions') updateConnUI();
+    if(tabId === 'comms') displayComms();
 }
 
 function launchOp() {
@@ -177,10 +217,7 @@ function updateOpsUI() {
         <div class="op-card">
             <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                 <strong style="color:var(--green-bright)">LEAD: ${op.lead.toUpperCase()}</strong>
-                <div>
-                    <button style="background:var(--edit-blue); font-size:0.6rem; margin-right:5px;" onclick="editOp(${op.id})">MODIFIER</button>
-                    <button style="background:var(--alert-red); font-size:0.6rem;" onclick="finishOp(${op.id})">FIN</button>
-                </div>
+                <button style="background:var(--alert-red); font-size:0.6rem;" onclick="finishOp(${op.id})">FIN</button>
             </div>
             <ul style="font-size:0.8rem; list-style:none; padding:0;">
                 ${op.units.map(u => `<li><span style="color:#888;">${u.name}:</span> ${u.pax}</li>`).join('')}
@@ -201,5 +238,9 @@ function saveRapport() {
     toggleRapSub('archive');
 }
 
-// ... Garde tes autres fonctions de gestion (deleteArchive, saveOtage, etc.) 
-// assure-toi juste qu'elles appellent bien persist() à la fin.
+function toggleRapSub(mode) {
+    document.getElementById('rap-form').style.display = mode === 'saisie' ? 'block' : 'none';
+    document.getElementById('rap-archive-list').style.display = mode === 'archive' ? 'block' : 'none';
+    document.getElementById('sub-rap-saisie').classList.toggle('active', mode === 'saisie');
+    document.getElementById('sub-rap-archive').classList.toggle('active', mode === 'archive');
+}
