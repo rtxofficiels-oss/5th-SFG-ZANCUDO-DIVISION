@@ -195,11 +195,11 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    window.updateGlobalData = function(data) {
-        set(ref(db, 'global/'), data);
-    };
+    // Envoi des données globales
+    window.updateGlobalData = (data) => set(ref(db, 'global/'), data);
 
-    window.updateStatus = function(userName, status) {
+    // Gestion de la présence
+    window.updateStatus = (userName, status) => {
         const userRef = ref(db, 'users/' + userName);
         if (status === 'online') {
             set(userRef, { status: 'online', last_changed: serverTimestamp() });
@@ -209,11 +209,14 @@
         }
     };
 
+    // ÉCOUTE TEMPS RÉEL
     onValue(ref(db, '/'), (snapshot) => {
         const data = snapshot.val();
+        console.log("Synchro Cloud reçue");
         if(window.refreshUIdisplay) window.refreshUIdisplay(data);
     });
 </script>
 
 </body>
 </html>
+
