@@ -1,5 +1,5 @@
 let activeOps = [];
-let archives = { hexa: [], res: [], abs: [], rap: [], comms: [] };
+let archives = { hexa: [], res: [], abs: [], rap: [], comms: [], ops: [] }; // Ajout de ops
 let currentUser = "";
 let allUsersStatus = {};
 
@@ -15,12 +15,13 @@ window.refreshUIdisplay = function(data) {
     if (!data) return;
     if (data.users) allUsersStatus = data.users;
     if (data.global) {
-        archives = data.global.archives || { hexa: [], res: [], abs: [], rap: [], comms: [] };
+        archives = data.global.archives || { hexa: [], res: [], abs: [], rap: [], comms: [], ops: [] };
         if (!archives.hexa) archives.hexa = [];
         if (!archives.res) archives.res = [];
         if (!archives.abs) archives.abs = [];
         if (!archives.rap) archives.rap = [];
         if (!archives.comms) archives.comms = [];
+        if (!archives.ops) archives.ops = []; // Sécurité
         activeOps = data.global.activeOps || [];
     }
     if (currentUser !== "") {
@@ -38,18 +39,15 @@ window.handleLoginKey = (e) => { if(e.key === "Enter") window.accessGranted(); }
 window.accessGranted = function() {
     const u = document.getElementById('user').value.toLowerCase();
     const p = document.getElementById('pass').value;
-
     if (membresAutorises[u] === p) {
         currentUser = u;
         if (window.updateStatus) window.updateStatus(u, 'online');
         document.getElementById('display-user').textContent = u.toUpperCase();
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'flex';
-        
         const opt = Object.keys(membresAutorises).sort().map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
         document.getElementById('comms-dest').innerHTML = opt;
         document.getElementById('lead-op').innerHTML = opt;
-
         updateConnUI();
         setInterval(() => {
             document.getElementById('system-clock').textContent = "SYSTEM_TIME: " + new Date().toLocaleString();
@@ -61,6 +59,8 @@ window.showTab = function(tabId) {
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
+    // Si on va sur l'onglet Rapport, on peut aussi y voir les archives d'opérations
+    if(tabId === 'rapport') renderList('ops'); 
 };
 
 window.toggleSub = (type, mode) => {
@@ -73,19 +73,34 @@ window.toggleCommsSub = (m) => window.toggleSub('comms', m);
 window.toggleAbsSub = (m) => window.toggleSub('abs', m);
 window.toggleRapSub = (m) => window.toggleSub('rap', m);
 
+// --- FONCTION DE SUPPRESSION D'ARCHIVE ---
+window.deleteArchive = function(type, index) {
+    const item = archives[type][index];
+    if (currentUser !== item.agent.toLowerCase() && currentUser !== "november") {
+        return alert("SEUL L'AUTEUR OU LE COMMANDEMENT PEUT SUPPRIMER CETTE ARCHIVE.");
+    }
+    if(confirm("SUPPRIMER DÉFINITIVEMENT CETTE ENTRÉE ?")) {
+        archives[type].splice(index, 1);
+        persist();
+        renderList(type);
+    }
+};
+
 function renderList(type) {
     const container = document.getElementById(type + '-archive-list');
+    if(!container) return;
     const items = archives[type] || [];
-    container.innerHTML = items.slice().reverse().map(item => {
+    container.innerHTML = items.map((item, i) => {
         if(type === 'comms' && item.to !== currentUser && item.from !== currentUser) return '';
         return `
-            <div class="archive-card" style="border-left:3px solid #8db600; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5);">
-                <small>${item.date || ''} | PAR: ${(item.agent || 'SYSTEM').toUpperCase()}</small><br>
+            <div class="archive-card" style="border-left:3px solid #8db600; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5); position:relative;">
+                <small>${item.date || ''} | PAR: ${(item.agent || 'SYSTEM').toUpperCase()}</small>
+                <button onclick="window.deleteArchive('${type}', ${i})" style="position:absolute; right:10px; top:10px; background:none; border:none; color:#ff4444; cursor:pointer; font-weight:bold;">[X]</button><br>
                 ${item.title ? `<strong>${item.title}</strong><br>` : ''}
                 ${item.nom ? `<strong>${item.nom} ${item.prenom}</strong> [${item.grade}]<br>` : ''}
-                <p>${item.infos || item.text || item.raison || ''}</p>
+                <p style="white-space: pre-line;">${item.infos || item.text || item.raison || ''}</p>
             </div>`;
-    }).join('') || "AUCUNE DONNÉE";
+    }).reverse().join('') || "AUCUNE DONNÉE";
 }
 
 window.saveOtage = function(type) {
@@ -127,12 +142,11 @@ window.launchOp = function() {
         if (n !== "") vels.push({ name: n, pax: p });
     }
     if (vels.length === 0) return alert("VIDE");
-    activeOps.push({ lead: document.getElementById('lead-op').value, vehicules: vels, date: new Date().toLocaleTimeString() });
+    activeOps.push({ lead: document.getElementById('lead-op').value, vehicules: vels, date: new Date().toLocaleString(), agent: currentUser });
     persist(); window.showTab('op-running');
     for (let i = 1; i <= 8; i++) { document.getElementById(`v${i}-name`).value = ""; document.getElementById(`v${i}-pax`).value = ""; }
 };
 
-// --- RENDU DES MISSIONS AVEC BOUTON MODIFIER ---
 function updateOpsUI() {
     const count = document.getElementById('widget-count');
     const list = document.getElementById('active-ops-list');
@@ -153,26 +167,40 @@ function updateOpsUI() {
 
 window.editOp = function(index) {
     const op = activeOps[index];
-    if (currentUser !== op.lead.toLowerCase()) {
-        return alert("ACCÈS REFUSÉ : SEUL LE LEAD (" + op.lead.toUpperCase() + ") PEUT MODIFIER.");
-    }
+    if (currentUser !== op.lead.toLowerCase()) return alert("ACCÈS REFUSÉ : SEUL LE LEAD PEUT MODIFIER.");
     window.showTab('depart');
     document.getElementById('lead-op').value = op.lead.toLowerCase();
     for (let i = 1; i <= 8; i++) {
         if (op.vehicules[i-1]) {
             document.getElementById(`v${i}-name`).value = op.vehicules[i-1].name;
             document.getElementById(`v${i}-pax`).value = op.vehicules[i-1].pax;
-        } else {
-            document.getElementById(`v${i}-name`).value = "";
-            document.getElementById(`v${i}-pax`).value = "";
         }
     }
     activeOps.splice(index, 1);
     persist();
-    alert("MODE MODIFICATION : METTEZ À JOUR ET RE-VALIDEZ.");
 };
 
-window.closeOp = (i) => { activeOps.splice(i,1); persist(); updateOpsUI(); };
+// --- TERMINER ET ARCHIVER L'OP ---
+window.closeOp = (i) => {
+    const op = activeOps[i];
+    if(!archives.ops) archives.ops = [];
+    
+    // On crée un texte résumé pour l'archive
+    let resume = `MISSION TERMINEE\nLEAD: ${op.lead.toUpperCase()}\n`;
+    op.vehicules.forEach(v => resume += `- ${v.name} (PAX: ${v.pax})\n`);
+
+    archives.ops.push({
+        title: "HISTORIQUE MISSION",
+        infos: resume,
+        agent: currentUser,
+        date: new Date().toLocaleString()
+    });
+
+    activeOps.splice(i,1);
+    persist();
+    updateOpsUI();
+    alert("MISSION ARCHIVÉE DANS L'ONGLET RAPPORT");
+};
 
 function updateConnUI() {
     document.getElementById('conn-list').innerHTML = Object.keys(membresAutorises).sort().map(u => {
