@@ -138,14 +138,27 @@ window.showTab = function(tabId) {
     if(tabId === 'connexions') updateConnUI();
 };
 
-function updateConnUI() {
+window.updateConnUI = function() {
     const list = document.getElementById('conn-list');
-    if(!list) return;
+    if (!list) return;
+
+    // On s'assure que allUsersStatus existe pour éviter les erreurs
+    const statusData = allUsersStatus || {};
+
     list.innerHTML = Object.keys(membresAutorises).sort().map(u => {
-        const online = allUsersStatus[u] && allUsersStatus[u].status === 'online';
-        return `<tr><td>${u.toUpperCase()}</td><td style="color:${online ? '#00ff00' : '#ff4444'}">${online ? '● EN LIGNE' : '○ HORS LIGNE'}</td></tr>`;
+        // Vérification ultra-précise du statut online
+        const isOnline = statusData[u] && statusData[u].status === 'online';
+        
+        const color = isOnline ? '#00ff00' : '#ff4444';
+        const label = isOnline ? '● EN LIGNE' : '○ HORS LIGNE';
+
+        return `
+            <tr>
+                <td style="color:var(--green-bright); font-weight:bold;">${u.toUpperCase()}</td>
+                <td style="color:${color}; font-weight:bold;">${label}</td>
+            </tr>`;
     }).join('');
-}
+};
 
 // --- AUTRES FONCTIONS (STUBS) ---
 function updateOpsUI() {}
@@ -163,3 +176,4 @@ window.toggleRapSub = function(mode) {
     document.getElementById('rap-form').style.display = mode === 'saisie' ? 'block' : 'none';
     document.getElementById('rap-archive-list').style.display = mode === 'archive' ? 'block' : 'none';
 };
+
