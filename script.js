@@ -1,221 +1,289 @@
 let activeOps = [];
-let archives = { hexa: [], res: [], abs: [], rap: [], comms: [], ops: [] };
+let archives = { hexa: [], res: [], abs: [], rap: [], comms: [] };
 let currentUser = "";
-let allUsersStatus = {};
-let currentDefcon = "5"; // Valeur par défaut
 
+// LISTE DES UTILISATEURS AVEC LEURS MOTS DE PASSE RESPECTIFS
 const membresAutorises = {
-    "november": "2110", "alaska": "sf5th", "alabama": "pass1", "rhode": "5thSFG-Rhode06",
-    "vermont": "Alpha-03vermont", "mississippi": "mississippitrofor", "montana": "pass4",
-    "nevada": "5th-bravo03-SFG", "kentucky": "pass6", "iowa": "Charlie-19-s-f-g",
-    "colorado": "Coloracoon11&7", "idaho": "pass9", "arizona": "pass10",
-    "oregon": "pass11", "utha": "pass12", "maine": "pass13", "indiana": "pass14"
+    "november": "2110",
+    "rhode": "5thSFG-Rhode06",
+    "alaska": "sf5th",
+    "alabama": "pass1",
+    "vermont": "pass2",
+    "mississippi": "mississippitrofor", 
+    "montana": "pass4",
+    "nevada": "5th-bravo03-SFG",
+    "kentucky": "pass6",
+    "iowa": "Charlie-19-s-f-g",
+    "colorado": "Coloracoon11&7", 
+    "idaho": "pass9",
+    "arizona": "pass10",
+    "oregon": "pass11",
+    "utha": "pass12",
+    "maine": "pass13",
+    "indiana": "pass14"
 };
 
-// --- GESTION VISUELLE DU DEFCON ---
-window.changeDefcon = function(val) {
-    currentDefcon = val;
-    persist(); // Sauvegarde immédiate dans Firebase
-};
-
-function applyDefconUI(val) {
-    // Configuration des 5 niveaux de couleurs
-    const config = {
-        "1": { main: "rgb(237, 7, 7)",  bg: "rgba(237, 7, 7, 0.3)" },  // ROUGE VIF
-        "2": { main: "rgb(190, 39, 39)", bg: "rgba(190, 39, 39, 0.25)" }, // ROUGE SOMBRE
-        "3": { main: "rgb(193, 99, 11)", bg: "rgba(193, 99, 11, 0.2)" },  // ORANGE
-        "4": { main: "#8db600",          bg: "rgba(0, 0, 0, 0)" },        // HUD VERT
-        "5": { main: "#8db600",          bg: "rgba(0, 0, 0, 0)" }         // HUD VERT
-    };
-
-    const style = config[val] || config["5"];
-    
-    const selector = document.getElementById('defcon-selector');
-    const dashboard = document.getElementById('dashboard');
-    const widget = document.getElementById('op-widget');
-    const overlay = document.getElementById('defcon-overlay');
-
-    // Mise à jour du sélecteur (couleur du texte)
-    if (selector) {
-        selector.value = val;
-        selector.style.color = style.main;
-    }
-
-    // Mise à jour de l'overlay (couleur du fond global)
-    if (overlay) {
-        overlay.style.background = style.bg;
-    }
-
-    // Mise à jour de la bordure du dashboard
-    if (dashboard) {
-        dashboard.style.borderColor = style.main;
-        dashboard.style.boxShadow = `inset 0 0 30px ${style.main}22`;
-    }
-
-    // Gestion du clignotement d'alerte (DEFCON 1 et 2)
-    if (widget) {
-        if (val === "1" || val === "2") {
-            widget.classList.add('blink-red-active');
-        } else {
-            widget.classList.remove('blink-red-active');
-        }
-    }
-}
-
-// --- MISE À JOUR FIREBASE ---
-window.refreshUIdisplay = function(data) {
-    if (!data) return;
-    if (data.users) allUsersStatus = data.users;
-    if (data.global) {
-        archives = data.global.archives || { hexa: [], res: [], abs: [], rap: [], comms: [], ops: [] };
-        activeOps = data.global.activeOps || [];
-        
-        // On récupère le Defcon depuis la base de données
-        currentDefcon = data.global.defcon || "5";
-        applyDefconUI(currentDefcon);
-    }
-    if (currentUser !== "") {
-        updateConnUI();
+window.onload = () => {
+    const data = localStorage.getItem('gbzd_data');
+    if(data) {
+        const parsed = JSON.parse(data);
+        archives = parsed.archives || archives;
+        activeOps = parsed.activeOps || activeOps;
         updateOpsUI();
     }
+    setInterval(updateClock, 1000);
 };
 
 function persist() {
-    if (window.updateGlobalData) {
-        window.updateGlobalData({ 
-            archives, 
-            activeOps, 
-            defcon: currentDefcon // On sauve le defcon ici
-        });
-    }
+    localStorage.setItem('gbzd_data', JSON.stringify({ archives, activeOps }));
 }
 
-// --- LOGIQUE DE CONNEXION ---
-window.handleLoginKey = (e) => { if(e.key === "Enter") window.accessGranted(); };
+function updateClock() {
+    const now = new Date();
+    document.getElementById('system-clock').textContent = "SYSTEM_TIME: " + now.toLocaleString();
+}
 
-window.accessGranted = function() {
-    const u = document.getElementById('user').value.toLowerCase();
-    const p = document.getElementById('pass').value;
-    if (membresAutorises[u] === p) {
+function handleLoginKey(e) { if(e.key === "Enter") accessGranted(); }
+
+function accessGranted() {
+    let u = document.getElementById('user').value.toLowerCase();
+    let p = document.getElementById('pass').value;
+
+    if (membresAutorises.hasOwnProperty(u) && membresAutorises[u] === p) {
         currentUser = u;
-        if (window.updateStatus) window.updateStatus(u, 'online');
         document.getElementById('display-user').textContent = u.toUpperCase();
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'flex';
         
-        const opt = Object.keys(membresAutorises).sort().map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
-        document.getElementById('comms-dest').innerHTML = opt;
-        document.getElementById('lead-op').innerHTML = opt;
+        const noms = Object.keys(membresAutorises).sort();
+        const optionsHTML = noms.map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
+        document.getElementById('comms-dest').innerHTML = optionsHTML;
+        document.getElementById('lead-op').innerHTML = optionsHTML; 
         
-        updateConnUI();
-        applyDefconUI(currentDefcon); // Appliquer au login
-
-        setInterval(() => {
-            document.getElementById('system-clock').textContent = "SYSTEM_TIME: " + new Date().toLocaleString();
-        }, 1000);
-    } else { alert("ACCÈS REFUSÉ"); }
-};
-
-// --- NAVIGATION & INTERFACE ---
-window.showTab = function(tabId) {
-    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    if(tabId === 'rapport') renderList('rap');
-};
-
-window.toggleSub = (type, mode) => {
-    document.getElementById(type + '-form').style.display = (mode === 'saisie' ? 'block' : 'none');
-    document.getElementById(type + '-archive-list').style.display = (mode === 'archive' ? 'block' : 'none');
-    if(mode === 'archive') renderList(type);
-};
-
-window.toggleCommsSub = (m) => window.toggleSub('comms', m);
-window.toggleAbsSub = (m) => window.toggleSub('abs', m);
-window.toggleRapSub = (m) => window.toggleSub('rap', m);
-
-// --- MISSIONS ---
-window.launchOp = function() {
-    let vels = [];
-    for (let i = 1; i <= 8; i++) {
-        let n = document.getElementById(`v${i}-name`).value;
-        let p = document.getElementById(`v${i}-pax`).value;
-        if (n !== "") vels.push({ name: n, pax: p });
+        document.getElementById('user').value = ""; document.getElementById('pass').value = "";
+    } else { 
+        alert("ACCÈS REFUSÉ : IDENTIFIANTS INCORRECTS"); 
     }
-    if (vels.length === 0) return alert("VIDE");
-    activeOps.push({ lead: document.getElementById('lead-op').value, vehicules: vels, date: new Date().toLocaleString(), agent: currentUser });
-    persist(); 
-    window.showTab('op-running');
-    for (let i = 1; i <= 8; i++) { document.getElementById(`v${i}-name`).value = ""; document.getElementById(`v${i}-pax`).value = ""; }
-};
+}
+
+function logout() {
+    currentUser = "";
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showTab(tabId) {
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(item => {
+        if(item.getAttribute('onclick').includes(`'${tabId}'`)) item.classList.add('active');
+    });
+}
+
+function launchOp() {
+    const lead = document.getElementById('lead-op').value;
+    const vNames = document.querySelectorAll('.v-name');
+    const vPax = document.querySelectorAll('.v-pax');
+    let vehicles = [];
+    vNames.forEach((v, i) => { if(v.value) vehicles.push({ name: v.value, pax: vPax[i].value }); });
+    if(!lead || vehicles.length === 0) return alert("DONNÉES MANQUANTES");
+    activeOps.push({ id: Date.now(), lead, units: vehicles });
+    persist();
+    vNames.forEach(v => v.value = ""); vPax.forEach(p => p.value = "");
+    updateOpsUI();
+    showTab('op-running');
+}
 
 function updateOpsUI() {
+    const widget = document.getElementById('widget-count');
+    if(widget) widget.textContent = activeOps.length;
     const list = document.getElementById('active-ops-list');
-    document.getElementById('widget-count').textContent = activeOps.length;
-    if(list) {
-        list.innerHTML = activeOps.map((op, i) => `
-            <div class="op-card" style="border:1px solid #4b5320; padding:15px; margin-bottom:10px; background:rgba(0,0,0,0.8);">
-                <strong style="color:var(--green-bright);">LEAD: ${op.lead.toUpperCase()}</strong><br>
-                ${op.vehicules.map(v => `<div>🛰️ ${v.name} | PAX: ${v.pax}</div>`).join('')}
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button onclick="window.editOp(${i})" style="flex:1; background:#4b5320; color:white;">MODIFIER</button>
-                    <button onclick="window.closeOp(${i})" style="flex:1; background:#8b0000; color:white;">TERMINER</button>
+    list.innerHTML = activeOps.length === 0 ? '<p style="font-style: italic; color: #444;">Aucune opération en cours.</p>' : 
+    activeOps.map(op => `
+        <div class="op-card">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <strong style="color:var(--green-bright)">LEAD: ${op.lead.toUpperCase()}</strong>
+                <div>
+                    <button style="background:var(--edit-blue); font-size:0.6rem; margin-right:5px;" onclick="editOp(${op.id})">MODIFIER</button>
+                    <button style="background:var(--alert-red); font-size:0.6rem;" onclick="finishOp(${op.id})">FIN</button>
                 </div>
-            </div>`).join('') || "AUCUNE OPÉRATION";
+            </div>
+            <ul style="font-size:0.8rem; list-style:none; padding:0;">
+                ${op.units.map(u => `<li><span style="color:#888;">${u.name}:</span> ${u.pax}</li>`).join('')}
+            </ul>
+        </div>
+    `).join('');
+}
+
+function editOp(id) {
+    const op = activeOps.find(o => o.id === id);
+    if(!op) return;
+    if(currentUser !== op.lead.toLowerCase()) return alert("ERREUR : SEUL LE LEAD PEUT MODIFIER.");
+    document.getElementById('lead-op').value = op.lead;
+    const vNames = document.querySelectorAll('.v-name');
+    const vPax = document.querySelectorAll('.v-pax');
+    op.units.forEach((u, i) => { if(i < vNames.length) { vNames[i].value = u.name; vPax[i].value = u.pax; } });
+    activeOps = activeOps.filter(o => o.id !== id);
+    showTab('depart');
+    updateOpsUI();
+}
+
+function finishOp(id) { if(confirm("Terminer cette mission ?")) { activeOps = activeOps.filter(o => o.id !== id); persist(); updateOpsUI(); } }
+
+function deleteArchive(type, index) {
+    if(confirm("Confirmer la suppression ?")) {
+        archives[type].splice(index, 1);
+        persist();
+        if(type === 'hexa' || type === 'res') displayArchives(type);
+        if(type === 'abs') displayAbs();
+        if(type === 'rap') displayRap();
+        if(type === 'comms') displayComms();
     }
 }
 
-window.closeOp = (i) => {
-    if(!confirm("TERMINER ET GÉNÉRER LE RAPPORT ?")) return;
-    const op = activeOps[i];
-    let details = `MISSION TERMINÉE\nLEAD: ${op.lead.toUpperCase()}\nDÉPLOIEMENT :\n`;
-    op.vehicules.forEach(v => details += `- ${v.name} [PAX: ${v.pax}]\n`);
-
-    if (!archives.rap) archives.rap = [];
-    archives.rap.push({
-        title: "FIN DE MISSION : " + op.lead.toUpperCase(),
-        text: details,
-        agent: currentUser,
-        date: new Date().toLocaleString()
-    });
-
-    activeOps.splice(i,1);
+function saveOtage(type) {
+    const p = type === 'hexa' ? 'h' : 'r';
+    const data = {
+        nom: document.getElementById(`${p}-nom`).value,
+        prenom: document.getElementById(`${p}-prenom`).value,
+        grade: document.getElementById(`${p}-grade`).value,
+        reg: document.getElementById(`${p}-reg`).value,
+        info: document.getElementById(`${p}-donne`).value,
+        timestamp: new Date().toLocaleString()
+    };
+    if(!data.nom) return alert("NOM REQUIS");
+    archives[type].push(data);
     persist();
-    updateOpsUI();
-};
-
-// --- AUTRES ARCHIVES ---
-window.deleteArchive = function(type, index) {
-    const item = archives[type][index];
-    if (currentUser !== item.agent.toLowerCase() && currentUser !== "november") return alert("REFUSÉ");
-    if(confirm("SUPPRIMER ?")) { archives[type].splice(index, 1); persist(); renderList(type); }
-};
-
-function renderList(type) {
-    const container = document.getElementById(type + '-archive-list');
-    if(!container) return;
-    const items = archives[type] || [];
-    container.innerHTML = items.map((item, i) => `
-        <div class="archive-card" style="border-left:3px solid #8db600; padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.5); position:relative;">
-            <small>${item.date} | PAR: ${item.agent.toUpperCase()}</small>
-            <button onclick="window.deleteArchive('${type}', ${i})" style="position:absolute; right:10px; top:10px; background:none; border:none; color:#ff4444; cursor:pointer;">[X]</button><br>
-            <strong>${item.title || 'INFO'}</strong>
-            <p style="white-space: pre-line; color:#ccc;">${item.infos || item.text || item.raison || ''}</p>
-        </div>`).reverse().join('') || "VIDE";
+    alert("DOSSIER ARCHIVÉ");
+    [`${p}-nom`, `${p}-prenom`, `${p}-grade`, `${p}-reg`, `${p}-donne`].forEach(id => document.getElementById(id).value = "");
+    toggleSub(type, 'archive');
 }
 
-// --- SAUVEGARDES ---
-window.saveRapport = function() {
-    if (!archives.rap) archives.rap = [];
-    archives.rap.push({ title: document.getElementById('rap-title').value, text: document.getElementById('rap-text').value, agent: currentUser, date: new Date().toLocaleString() });
-    persist(); window.toggleSub('rap', 'archive');
-};
-
-function updateConnUI() {
-    document.getElementById('conn-list').innerHTML = Object.keys(membresAutorises).sort().map(u => {
-        const on = allUsersStatus[u] && allUsersStatus[u].status === 'online';
-        return `<tr><td>${u.toUpperCase()}</td><td style="color:${on?'#00ff00':'#ff4444'}">${on?'● EN LIGNE':'○ HORS LIGNE'}</td></tr>`;
-    }).join('');
+function saveAbsence() {
+    const data = {
+        call: document.getElementById('abs-call').value,
+        grade: document.getElementById('abs-grade').value,
+        start: document.getElementById('abs-start').value,
+        end: document.getElementById('abs-end').value,
+        reason: document.getElementById('abs-raison').value
+    };
+    if(!data.call || !data.start) return alert("DONNÉES MANQUANTES");
+    archives.abs.push(data);
+    persist();
+    ['abs-call', 'abs-grade', 'abs-start', 'abs-end', 'abs-raison'].forEach(id => document.getElementById(id).value = "");
+    toggleAbsSub('archive');
 }
 
-window.logout = () => { if(window.updateStatus) window.updateStatus(currentUser, 'offline'); location.reload(); };
+function displayAbs() { 
+    document.getElementById('abs-archive-list').innerHTML = archives.abs.map((a, index) => `
+        <div class="archive-card">
+            <button class="btn-delete" onclick="deleteArchive('abs', ${index})">SUPPRIMER</button>
+            <strong style="color:var(--green-bright)">${a.call}</strong> [${a.grade}]<br>
+            <small>DU ${a.start} AU ${a.end}</small>
+            <p style="margin-top:5px;">RAISON: ${a.reason}</p>
+        </div>`).join('');
+}
+
+function saveRapport() {
+    const title = document.getElementById('rap-title').value;
+    const text = document.getElementById('rap-text').value;
+    if(!text) return alert("CONTENU VIDE");
+    archives.rap.push({t: title, x: text, time: new Date().toLocaleString()});
+    persist();
+    document.getElementById('rap-title').value = ""; document.getElementById('rap-text').value = "";
+    toggleRapSub('archive');
+}
+
+function displayRap() {
+    document.getElementById('rap-archive-list').innerHTML = archives.rap.map((r, index) => `
+        <div class="archive-card">
+            <button class="btn-edit" onclick="editRap(${index})">MODIFIER</button>
+            <button class="btn-delete" onclick="deleteArchive('rap', ${index})">SUPPRIMER</button>
+            <strong>${r.t}</strong> <small>(${r.time})</small><p>${r.x}</p>
+        </div>`).join('');
+}
+
+function editRap(index) {
+    const data = archives.rap[index];
+    document.getElementById('rap-title').value = data.t;
+    document.getElementById('rap-text').value = data.x;
+    archives.rap.splice(index, 1);
+    toggleRapSub('saisie');
+}
+
+function sendComm() {
+    const dest = document.getElementById('comms-dest').value;
+    const msg = document.getElementById('comms-msg').value;
+    if(!msg) return alert("MESSAGE VIDE");
+    archives.comms.push({ from: currentUser, to: dest, text: msg, time: new Date().toLocaleString() });
+    persist();
+    alert("TRANSMISSION RÉUSSIE");
+    document.getElementById('comms-msg').value = "";
+    toggleCommsSub('archive');
+}
+
+function displayComms() {
+    const list = document.getElementById('comms-archive-list');
+    const mesMessages = archives.comms.filter(c => c.from === currentUser || c.to === currentUser);
+    list.innerHTML = mesMessages.length === 0 ? "<p>Aucun message.</p>" : 
+        mesMessages.reverse().map((c, index) => `
+            <div class="archive-card" style="border-left-color: ${c.from === currentUser ? 'var(--green-bright)' : 'var(--edit-blue)'}">
+                <button class="btn-delete" onclick="deleteArchive('comms', ${archives.comms.indexOf(c)})">EFFACER</button>
+                <small style="color:#888">${c.time}</small><br>
+                <strong>DE: ${c.from.toUpperCase()} | À: ${c.to.toUpperCase()}</strong>
+                <p style="margin-top:10px; font-style: italic;">"${c.text}"</p>
+            </div>`).join('');
+}
+
+function toggleSub(type, mode) {
+    document.getElementById(`${type}-form`).style.display = (mode === 'saisie') ? 'block' : 'none';
+    document.getElementById(`${type}-archive-list`).style.display = (mode === 'archive') ? 'block' : 'none';
+    document.getElementById(`sub-${type}-saisie`).className = `sub-item ${mode === 'saisie' ? 'active' : ''}`;
+    document.getElementById(`sub-${type}-archive`).className = `sub-item ${mode === 'archive' ? 'active' : ''}`;
+    if(mode === 'archive') displayArchives(type);
+}
+function toggleAbsSub(m) { 
+    document.getElementById('abs-form').style.display = m=='saisie'?'block':'none'; 
+    document.getElementById('abs-archive-list').style.display = m=='archive'?'block':'none';
+    document.getElementById('sub-abs-saisie').className = `sub-item ${m === 'saisie' ? 'active' : ''}`;
+    document.getElementById('sub-abs-archive').className = `sub-item ${m === 'archive' ? 'active' : ''}`;
+    if(m=='archive') displayAbs();
+}
+function toggleRapSub(m) {
+    document.getElementById('rap-form').style.display = m=='saisie'?'block':'none';
+    document.getElementById('rap-archive-list').style.display = m=='archive'?'block':'none';
+    document.getElementById('sub-rap-saisie').className = `sub-item ${m === 'saisie' ? 'active' : ''}`;
+    document.getElementById('sub-rap-archive').className = `sub-item ${m === 'archive' ? 'active' : ''}`;
+    if(m=='archive') displayRap();
+}
+function toggleCommsSub(m) {
+    document.getElementById('comms-form').style.display = m=='saisie'?'block':'none';
+    document.getElementById('comms-archive-list').style.display = m=='archive'?'block':'none';
+    document.getElementById('sub-comms-saisie').className = `sub-item ${m === 'saisie' ? 'active' : ''}`;
+    document.getElementById('sub-comms-archive').className = `sub-item ${m === 'archive' ? 'active' : ''}`;
+    if(m=='archive') displayComms();
+}
+function displayArchives(type) {
+    const list = document.getElementById(`${type}-archive-list`);
+    list.innerHTML = archives[type].length === 0 ? "<p>Aucune donnée.</p>" : 
+        archives[type].map((o, index) => `
+            <div class="archive-card">
+                <button class="btn-edit" onclick="editOtage('${type}', ${index})">MODIFIER</button>
+                <button class="btn-delete" onclick="deleteArchive('${type}', ${index})">SUPPRIMER</button>
+                <strong style="color:var(--green-bright)">${o.nom} ${o.prenom}</strong> [${o.grade}]<br>
+                <small>Régiment: ${o.reg} | Enregistré le: ${o.timestamp}</small>
+                <p style="margin-top:10px; border-top:1px solid #333; padding-top:5px;">${o.info}</p>
+            </div>`).join('');
+}
+function editOtage(type, index) {
+    const p = type === 'hexa' ? 'h' : 'r';
+    const data = archives[type][index];
+    document.getElementById(`${p}-nom`).value = data.nom;
+    document.getElementById(`${p}-prenom`).value = data.prenom;
+    document.getElementById(`${p}-grade`).value = data.grade;
+    document.getElementById(`${p}-reg`).value = data.reg;
+    document.getElementById(`${p}-donne`).value = data.info;
+    archives[type].splice(index, 1);
+    toggleSub(type, 'saisie');
+}
