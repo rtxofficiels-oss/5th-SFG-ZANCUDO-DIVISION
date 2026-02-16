@@ -4,34 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>5th SFG ZANCUDO DIVISION</title>
-    
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://*.firebaseio.com; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com; img-src 'self' data: https://images.unsplash.com; style-src 'self' 'unsafe-inline';">
-
     <link rel="stylesheet" href="style.css">
     <style>
+        /* Overlay pour le changement de couleur global */
         #defcon-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none;
-            z-index: 1;
+            pointer-events: none; /* Permet de cliquer à travers */
+            z-index: 1; /* Entre le fond et le contenu */
             transition: background 1.5s ease;
             background: rgba(0, 0, 0, 0);
         }
 
+        /* Conteneur principal au-dessus de l'overlay */
         #login-screen, #dashboard {
             position: relative;
             z-index: 10;
         }
 
+        /* Animation pour le clignotement DEFCON 1 & 2 */
         @keyframes blink-red {
             0% { opacity: 1; border-color: #ff0000; box-shadow: inset 0 0 15px #ff0000; }
             50% { opacity: 0.7; border-color: #550000; box-shadow: inset 0 0 5px #550000; }
             100% { opacity: 1; border-color: #ff0000; box-shadow: inset 0 0 15px #ff0000; }
         }
-        .blink-red-active {
+        .blink-active {
             animation: blink-red 1s infinite !important;
             background: rgba(237, 7, 7, 0.2) !important;
         }
@@ -68,11 +68,11 @@
             <div id="alert-status-container" style="margin-right: 15px; border: 1px solid #444; padding: 2px 8px; background: rgba(0,0,0,0.8); display: flex; align-items: center; gap: 5px;">
                 <label style="font-size: 0.65rem; color: #888; font-family: monospace;">ALERT_LEVEL:</label>
                 <select id="defcon-selector" onchange="window.changeDefcon(this.value)" style="background:none; color:#8db600; border:none; font-family:monospace; cursor:pointer; font-weight:bold; font-size:0.8rem; outline:none;">
-                    <option value="5">DEFCON 5</option>
-                    <option value="4">DEFCON 4</option>
-                    <option value="3">DEFCON 3</option>
-                    <option value="2">DEFCON 2</option>
-                    <option value="1">DEFCON 1</option>
+                    <option value="5" style="background:#000; color:#8db600;">DEFCON 5</option>
+                    <option value="4" style="background:#000; color:#8db600;">DEFCON 4</option>
+                    <option value="3" style="background:#000; color:#c1630b;">DEFCON 3</option>
+                    <option value="2" style="background:#000; color:#be2727;">DEFCON 2</option>
+                    <option value="1" style="background:#000; color:#ed0707;">DEFCON 1</option>
                 </select>
             </div>
 
@@ -92,7 +92,6 @@
                 <p style="font-size: 0.8rem; color: #666;">Système opérationnel. Surveillance satellite active.</p>
             </div>
         </div>
-
         <div id="connexions" class="content-section">
             <h2>> ÉTAT DES CONNEXIONS RÉSEAU</h2>
             <table class="conn-table">
@@ -136,7 +135,9 @@
             </div>
             <div id="abs-form">
                 <input type="text" id="abs-call" placeholder="Nom / CallSign">
-                <input type="text" id="abs-raison" placeholder="Raison de l'absence...">
+                <input type="text" id="abs-start" placeholder="Date début">
+                <input type="text" id="abs-end" placeholder="Date fin">
+                <textarea id="abs-raison" placeholder="Raison de l'absence..."></textarea>
                 <button onclick="window.saveAbsence()">VALIDER</button>
             </div>
             <div id="abs-archive-list" style="display:none;"></div>
@@ -150,6 +151,8 @@
             </div>
             <div id="hexa-form">
                 <input type="text" id="h-nom" placeholder="NOM">
+                <input type="text" id="h-prenom" placeholder="PRÉNOM">
+                <input type="text" id="h-grade" placeholder="GRADE">
                 <textarea id="h-donne" placeholder="Informations obtenues..."></textarea>
                 <button onclick="window.saveOtage('hexa')">ARCHIVER</button>
             </div>
@@ -164,6 +167,8 @@
             </div>
             <div id="res-form">
                 <input type="text" id="r-nom" placeholder="NOM">
+                <input type="text" id="r-prenom" placeholder="PRÉNOM">
+                <input type="text" id="r-grade" placeholder="GRADE">
                 <textarea id="r-donne" placeholder="Informations obtenues..."></textarea>
                 <button onclick="window.saveOtage('res')">ARCHIVER</button>
             </div>
@@ -201,7 +206,7 @@
     </div>
 </div>
 
-<script src="script.js"></script>
+<script type="module" src="script.js"></script>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -237,12 +242,17 @@
     });
 </script>
 
-<script>
+    <script>
+    // Bloquer le clic droit
     document.addEventListener('contextmenu', event => event.preventDefault());
+
+    // Bloquer les touches de raccourci (F12, Ctrl+Maj+I, Ctrl+U)
     document.onkeydown = function(e) {
-        if (e.keyCode == 123) return false;
+        if (e.keyCode == 123) return false; // F12
         if (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false;
-        if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+        if (e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) return false;
+        if (e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) return false;
+        if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false; // Voir source
     };
 </script>
 </body>
