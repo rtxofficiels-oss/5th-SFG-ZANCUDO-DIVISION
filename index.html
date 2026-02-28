@@ -3,55 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maintenance en cours</title>
+    <title>5th SFG ZANCUDO DIVISION</title>
+    <link rel="stylesheet" href="style.css">
     <style>
-        /* On cible l'écran entier */
-        html, body {
+        /* Overlay pour le changement de couleur global */
+        #defcon-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 100%;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #1a1a1a; /* Fond sombre moderne */
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            pointer-events: none; /* Permet de cliquer à travers */
+            z-index: 1; /* Entre le fond et le contenu */
+            transition: background 1.5s ease;
+            background: rgba(0, 0, 0, 0);
         }
 
-        .card {
-            text-align: center;
-            padding: 40px;
-            border-radius: 15px;
-            background: #252525;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            max-width: 500px;
+        /* Conteneur principal au-dessus de l'overlay */
+        #login-screen, #dashboard {
+            position: relative;
+            z-index: 10;
         }
 
-        h1 { font-size: 2.5rem; margin-bottom: 1rem; color: #ffcc00; }
-        p { font-size: 1.1rem; line-height: 1.6; opacity: 0.8; }
-        
-        .loader {
-            border: 4px solid #333;
-            border-top: 4px solid #ffcc00;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+        /* Animation pour le clignotement DEFCON 1 & 2 */
+        @keyframes blink-red {
+            0% { opacity: 1; border-color: #ff0000; box-shadow: inset 0 0 15px #ff0000; }
+            50% { opacity: 0.7; border-color: #550000; box-shadow: inset 0 0 5px #550000; }
+            100% { opacity: 1; border-color: #ff0000; box-shadow: inset 0 0 15px #ff0000; }
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .blink-active {
+            animation: blink-red 1s infinite !important;
+            background: rgba(237, 7, 7, 0.2) !important;
         }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div class="loader"></div>
-        <h1>Maintenance</h1>
-        <p>Nous effectuons actuellement des mises à jour pour améliorer votre expérience. Revenez d'ici quelques heures !</p>
-    </div>
+<div id="defcon-overlay"></div>
 
+<div id="login-screen">
+    <div class="login-box">
+        <h2 style="color: var(--green-bright); border:none; padding:0; margin-bottom:20px;">5th SFG ZANCUDO DIVISION</h2>
+        <input type="text" id="user" placeholder="USER" onkeypress="window.handleLoginKey(event)">
+        <input type="password" id="pass" placeholder="PASSWORD" onkeypress="window.handleLoginKey(event)">
+        <br>
+        <button onclick="window.accessGranted()">CONNECTION</button>
+    </div>
+</div>
+
+<div id="dashboard" style="display:none; border-top: 4px solid #00ff00; transition: all 0.5s ease;"> 
+    <header>
+        <nav id="main-nav">
+            <div class="nav-item active" onclick="window.showTab('home')">Accueil</div>
+            <div class="nav-item" onclick="window.showTab('connexions')">Connexions</div> 
+            <div class="nav-item" onclick="window.showTab('op-running')">Opérations en cours</div>
+            <div class="nav-item" onclick="window.showTab('depart')">Départ Opération</div>
+            <div class="nav-item" onclick="window.showTab('absence')">Absences</div>
+            <div class="nav-item" onclick="window.showTab('otages-hexa')">Otages Hexa</div>
+            <div class="nav-item" onclick="window.showTab('otages-res')">Otages Résistants</div>
+            <div class="nav-item" onclick="window.showTab('rapport')">Rapport</div>
+            <div class="nav-item" onclick="window.showTab('comms')">Communications</div>
+        </nav>
+        <div class="header-right" style="display: flex; align-items: center;">
+            <div id="alert-status-container" style="margin-right: 15px; border: 1px solid #444; padding: 2px 8px; background: rgba(0,0,0,0.8); display: flex; align-items: center; gap: 5px;">
+                <label style="font-size: 0.65rem; color: #888; font-family: monospace;">ALERT_LEVEL:</label>
+                <select id="defcon-selector" onchange="window.changeDefcon(this.value)" style="background:none; color:#8db600; border:none; font-family:monospace; cursor:pointer; font-weight:bold; font-size:0.8rem; outline:none;">
+                    <option value="5" style="background:#000; color:#8db600;">DEFCON 5</option>
+                    <option value="4" style="background:#000; color:#8db600;">DEFCON 4</option>
+                    <option value="3" style="background:#000; color:#c1630b;">DEFCON 3</option>
+                    <option value="2" style="background:#000; color:#be2727;">DEFCON 2</option>
+                    <option value="1" style="background:#000; color:#ed0707;">DEFCON 1</option>
+                </select>
+            </div>
+
+            <div id="op-widget" onclick="window.showTab('op-running')" style="cursor:pointer; border:1px solid var(--green-army); padding:2px 8px;">
+                OPÉRATIONS ACTIVES : <span id="widget-count" style="color:var(--green-bright)">0</span>
+            </div>
+            <button class="btn-logout" onclick="window.logout()" style="margin-left:10px;">LOGOUT</button>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div id="home" class="content-section active">
+            <h2>> TERMINAL D'ACCUEIL</h2>
+            <div style="background: rgba(0,0,0,0.7); padding: 20px; border: 1px solid var(--green-army);">
+                <p>Bienvenue, Opérateur <span id="display-user" style="color:var(--green-bright)"></span>.</p>
+                <p id="system-clock" style="color:var(--green-bright); font-size: 1.1rem;"></p>
+                <p style="font-size: 0.8rem; color: #666;">Système opérationnel. Surveillance satellite active.</p>
+            </div>
+        </div>
+        <div id="connexions" class="content-section">
+            <h2>> ÉTAT DES CONNEXIONS RÉSEAU</h2>
+            <table class="conn-table">
+                <thead><tr><th>OPÉRATEUR</th><th>STATUT</th></tr></thead>
+                <tbody id="conn-list"></tbody>
+            </table>
+        </div>
+
+        <div id="op-running" class="content-section">
+            <h2>> MISSIONS ACTIVES</h2>
+            <div id="active-ops-list"></div>
+        </div>
+
+        <div id="depart" class="content-section">
+            <h2>> NOUVEAU DÉPLOIEMENT</h2>
+            <div style="max-width: 600px; background: rgba(0,0,0,0.8); padding: 20px; border: 1px solid var(--green-army);">
+                <label>LEAD OPERATION :</label>
+                <select id="lead-op"></select>
+                <div style="margin-top: 20px;">
+                    <div class="vehicule-row" style="font-weight: bold; color: var(--green-bright); display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>VÉHICULE</div><div>PAX</div>
+                    </div>
+                    <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><input type="text" id="v1-name" placeholder="V1"> <input type="text" id="v1-pax" placeholder="Pax"></div>
+                    <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><input type="text" id="v2-name" placeholder="V2"> <input type="text" id="v2-pax" placeholder="Pax"></div>
+                    <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><input type="text" id="v3-name" placeholder="V3"> <input type="text" id="v3-pax" placeholder="Pax"></div>
+                    <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><input type="text" id="v4-name" placeholder="V4"> <input type="text" id="v4-pax" placeholder="Pax"></div>
+                    <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><input type="text" id="v5-name" placeholder="V5"> <input type="text" id="v5-pax" placeholder="Pax"></div>
+                    <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><input type="text" id="v6-name" placeholder="V6"> <input type="text" id="v6-pax" placeholder="Pax"></div>
+                    <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><input type="text" id="v7-name" placeholder="V7"> <input type="text" id="v7-pax" placeholder="Pax"></div>
+                    <div class="vehicule-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><input type="text" id="v8-name" placeholder="V8"> <input type="text" id="v8-pax" placeholder="Pax"></div>
+                </div>
+                <button onclick="window.launchOp()" style="width: 100%; margin-top:15px;">INITIALISER MISSION</button>
+            </div>
+        </div>
+
+        <div id="absence" class="content-section">
+            <h2>> GESTION DES ABSENCES</h2>
+            <div class="sub-nav">
+                <button onclick="window.toggleAbsSub('saisie')">DÉCLARER</button>
+                <button onclick="window.toggleAbsSub('archive')">ARCHIVES</button>
+            </div>
+            <div id="abs-form">
+                <input type="text" id="abs-call" placeholder="Nom / CallSign">
+                <input type="text" id="abs-start" placeholder="Date début">
+                <input type="text" id="abs-end" placeholder="Date fin">
+                <textarea id="abs-raison" placeholder="Raison de l'absence..."></textarea>
+                <button onclick="window.saveAbsence()">VALIDER</button>
+            </div>
+            <div id="abs-archive-list" style="display:none;"></div>
+        </div>
+
+        <div id="otages-hexa" class="content-section">
+            <h2>> OTAGES - DIVISION HEXAGONALE</h2>
+            <div class="sub-nav">
+                <button onclick="window.toggleSub('hexa', 'saisie')">SAISIE</button>
+                <button onclick="window.toggleSub('hexa', 'archive')">DOSSIERS</button>
+            </div>
+            <div id="hexa-form">
+                <input type="text" id="h-nom" placeholder="NOM">
+                <input type="text" id="h-prenom" placeholder="PRÉNOM">
+                <input type="text" id="h-grade" placeholder="GRADE">
+                <textarea id="h-donne" placeholder="Informations obtenues..."></textarea>
+                <button onclick="window.saveOtage('hexa')">ARCHIVER</button>
+            </div>
+            <div id="hexa-archive-list" style="display:none;"></div>
+        </div>
+
+        <div id="otages-res" class="content-section">
+            <h2>> OTAGES - RÉSISTANTS</h2>
+            <div class="sub-nav">
+                <button onclick="window.toggleSub('res', 'saisie')">SAISIE</button>
+                <button onclick="window.toggleSub('res', 'archive')">DOSSIERS</button>
+            </div>
+            <div id="res-form">
+                <input type="text" id="r-nom" placeholder="NOM">
+                <input type="text" id="r-prenom" placeholder="PRÉNOM">
+                <input type="text" id="r-grade" placeholder="GRADE">
+                <textarea id="r-donne" placeholder="Informations obtenues..."></textarea>
+                <button onclick="window.saveOtage('res')">ARCHIVER</button>
+            </div>
+            <div id="res-archive-list" style="display:none;"></div>
+        </div>
+
+        <div id="rapport" class="content-section">
+            <h2>> RAPPORTS DE MISSION</h2>
+            <div class="sub-nav">
+                <button onclick="window.toggleRapSub('saisie')">RÉDIGER</button>
+                <button onclick="window.toggleRapSub('archive')">ARCHIVES</button>
+            </div>
+            <div id="rap-form">
+                <input type="text" id="rap-title" placeholder="Titre du rapport">
+                <textarea id="rap-text" style="height:200px;" placeholder="Détails de l'opération..."></textarea>
+                <button onclick="window.saveRapport()">TRANSMETTRE</button>
+            </div>
+            <div id="rap-archive-list" style="display:none;"></div>
+        </div>
+
+        <div id="comms" class="content-section">
+            <h2>> COMMUNICATIONS SÉCURISÉES</h2>
+            <div class="sub-nav">
+                <button onclick="window.toggleCommsSub('saisie')">MESSAGE</button>
+                <button onclick="window.toggleCommsSub('archive')">BOITE DE RÉCEPTION</button>
+            </div>
+            <div id="comms-form">
+                <label>DESTINATAIRE :</label>
+                <select id="comms-dest"></select>
+                <textarea id="comms-msg" placeholder="Votre message..."></textarea>
+                <button onclick="window.sendComm()">ENVOYER</button>
+            </div>
+            <div id="comms-archive-list" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="script.js"></script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD837-8hJ_B4XPJuXTE8i29bAMTSy2VQo",
+        authDomain: "sfg-zancudo-division.firebaseapp.com",
+        databaseURL: "https://sfg-zancudo-division-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "sfg-zancudo-division",
+        storageBucket: "sfg-zancudo-division.firebasestorage.app",
+        messagingSenderId: "975179018138",
+        appId: "1:975179018138:web:45410cd990b2ee39a81423"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.updateGlobalData = (data) => set(ref(db, 'global/'), data);
+    window.updateStatus = (userName, status) => {
+        const userRef = ref(db, 'users/' + userName);
+        if (status === 'online') {
+            set(userRef, { status: 'online', last_changed: serverTimestamp() });
+            onDisconnect(userRef).set({ status: 'offline', last_changed: serverTimestamp() });
+        } else {
+            set(userRef, { status: 'offline', last_changed: serverTimestamp() });
+        }
+    };
+
+    onValue(ref(db, '/'), (snapshot) => {
+        const data = snapshot.val();
+        if(window.refreshUIdisplay) window.refreshUIdisplay(data);
+    });
+</script>
+
+    <script>
+    // Bloquer le clic droit
+    document.addEventListener('contextmenu', event => event.preventDefault());
+
+    // Bloquer les touches de raccourci (F12, Ctrl+Maj+I, Ctrl+U)
+    document.onkeydown = function(e) {
+        if (e.keyCode == 123) return false; // F12
+        if (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false;
+        if (e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) return false;
+        if (e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) return false;
+        if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false; // Voir source
+    };
+</script>
 </body>
 </html>
